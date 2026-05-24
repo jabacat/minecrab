@@ -44,12 +44,15 @@ fn main() {
         t.unwrap()
     };
 
-    let models = generate_chunk(&mut rl, &thread, 0, 0, 0);
+    let mut models = generate_chunk(&mut rl, &thread, 0, 0, 0);
     dbg!(models.len());
-    // models.iter().map(|m| {
-    //     let materials = m.materials_mut();
-    //     let material = &mut materials[0];
-    // })
+    models.iter_mut().for_each(|m| {
+        let materials = m.materials_mut();
+        let material = &mut materials[0];
+
+        let maps = material.maps_mut();
+        maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
+    });
     // let mut material = rl.load_material_default(&thread);
     // material.set_material_texture(MaterialMapIndex::MATERIAL_MAP_ALBEDO, texture);
 
@@ -83,7 +86,7 @@ fn main() {
                 // let material = material.clone();
 
                 for model in &models {
-                    d2.draw_model(model, Vector3::zero(), 1.0, Color::DARKGREEN);
+                    d2.draw_model(model, Vector3::zero(), 1.0, Color::WHITE);
                     // d2.draw_mesh(model, material.clone(), Matrix::identity());
                 }
                 
@@ -162,9 +165,9 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                     x + 1., y, z + 1.,
                                 ]);
                                 tex_coords.extend_from_slice(&[
-                                    1.0, 0.0,
-                                    1.0, 1.0,
-                                    0.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
+                                    0.0, 0.1,
                                     0.0, 0.0,
                                 ]);
                             } else if dx == -1 {
@@ -176,9 +179,9 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                 ]);
                                 tex_coords.extend_from_slice(&[
                                     0.0, 0.0,
-                                    1.0, 0.0,
-                                    1.0, 1.0,
-                                    0.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
+                                    0.0, 0.1,
                                 ]);
                             } else if dy == 1 {
                                 vertices.extend_from_slice(&[
@@ -188,10 +191,10 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                     x + 1., y + 1., z,
                                 ]);
                                 tex_coords.extend_from_slice(&[
-                                    0.0, 1.0,
+                                    0.0, 0.1,
                                     0.0, 0.0,
-                                    1.0, 0.0,
-                                    1.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
                                 ]);
                             } else if dy == -1 {
                                 vertices.extend_from_slice(&[
@@ -202,9 +205,9 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                 ]);
                                 tex_coords.extend_from_slice(&[
                                     0.0, 0.0,
-                                    1.0, 0.0,
-                                    1.0, 1.0,
-                                    0.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
+                                    0.0, 0.1,
                                 ]);
                             } else if dz == 1 {
                                 vertices.extend_from_slice(&[
@@ -215,9 +218,9 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                 ]);
                                 tex_coords.extend_from_slice(&[
                                     0.0, 0.0,
-                                    1.0, 0.0,
-                                    1.0, 1.0,
-                                    0.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
+                                    0.0, 0.1,
                                 ]);
                             } else if dz == -1 {
                                 vertices.extend_from_slice(&[
@@ -227,9 +230,9 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                                     x + 1., y, z,
                                 ]);
                                 tex_coords.extend_from_slice(&[
-                                    1.0, 0.0,
-                                    1.0, 1.0,
-                                    0.0, 1.0,
+                                    0.1, 0.0,
+                                    0.1, 0.1,
+                                    0.0, 0.1,
                                     0.0, 0.0,
                                 ]);
                             }
