@@ -11,6 +11,8 @@ use crate::world::world::World;
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
 
+// Generate one chunk every [FRAMES_PER_CHUNK] frames so world generation isn't
+// exceedingly laggy at the beginning.
 const FRAMES_PER_CHUNK: i32 = 5;
 
 fn main() {
