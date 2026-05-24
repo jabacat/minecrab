@@ -1,9 +1,13 @@
 use raylib::prelude::*;
 
+mod mesh_tools;
+mod camera_controls;
+mod world;
+
+use mesh_tools::VecMesh;
+use camera_controls::{Player, update_camera};
 use crate::world::generation::generate_chunk;
 
-mod mesh_tools;
-mod world;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -16,12 +20,7 @@ fn main() {
         .highdpi()
         .build();
 
-    let mut camera = Camera3D::perspective(
-        Vector3::new(3.0, 3.0, 3.0),
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        45.0,
-    );
+    let mut player = Player::new();
 
     let mut first_click = false;
     let mut debug_display = false; // toggle
@@ -61,16 +60,18 @@ fn main() {
                 rl.disable_cursor();
             }
         } else {
-            rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
+            // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
+            update_camera(&mut player, &mut rl);
         }
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
             debug_display = !debug_display;
         }
 
+
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
-            d.draw_mode3D(camera, |mut d2, _camera| {
+            d.draw_mode3D(player.camera, |mut d2, _camera| {
                 for model in &models {
                     d2.draw_model(model, Vector3::zero(), 1., Color::WHITE);
                 }
@@ -83,7 +84,9 @@ fn main() {
                 let mut debug_info = String::new();
                 debug_info += &format!(
                     "Camera position: {:.4} {:.4} {:.4}\n",
-                    camera.position.x, camera.position.y, camera.position.z
+                    player.camera.position.x,
+                    player.camera.position.y,
+                    player.camera.position.z
                 );
                 debug_info += &format!(
                     "FPS: {}\n",
