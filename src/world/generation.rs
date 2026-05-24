@@ -3,8 +3,7 @@ use raylib::prelude::*;
 
 use crate::mesh_tools::VecMesh;
 
-// FIXME: use x y z offsets properly
-pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, z: i64) -> Model {
+pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, cx: i64, cy: i64, cz: i64) -> Model {
     let ssn = SuperSimplex::new(42);
 
     let mut vertices: Vec<f32> = Vec::new();
@@ -15,6 +14,7 @@ pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i
     for x in -16..16 {
         for y in -16..16 {
             for z in -16..16 {
+                let (x, y, z) = (x + 32 * cx, y + 32 * cy, z + 32 * cz);
                 if ssn.get([(x as f64 / 16.) , (y as f64 / 16.) , (z as f64 / 16.) ]) > 0.5 {
                     for (dx, dy, dz) in [
                         (1, 0, 0),
