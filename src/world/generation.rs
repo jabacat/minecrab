@@ -3,19 +3,55 @@ use raylib::prelude::*;
 
 use crate::mesh_tools::VecMesh;
 
+const CHUNK_SIZE: i64 = 32;
+
 pub struct BlockData {
     non_void: bool
 }
 
-pub fn get_block_data(x: i64, y: i64, z: i64) -> BlockData {
-    static SSN: std::sync::LazyLock<SuperSimplex> = std::sync::LazyLock::new(|| SuperSimplex::new(42));
+pub struct ChunkData {
+    cx: i64, cy: i64, cz: i64,
+    block_data: Box<[BlockData]>
+}
 
-    BlockData {
-        non_void: SSN.get([(x as f64 / 16.) , (y as f64 / 16.) , (z as f64 / 16.) ]) > 0.5
+impl ChunkData {
+    pub fn get_block_data(self: &ChunkData, x: i64, y: i64, z: i64) -> BlockData {
+        let (lx, ly, lz) = (x - self.cx, y - self.cy, z - self.cz);
+
+        let idx = ly * CHUNK_SIZE * CHUNK_SIZE + lz * CHUNK_SIZE + lx;
+
+        self.block_data[idx];
     }
 }
 
-fn generate_voxel_mesh(vmesh: &mut VecMesh, x: i64, y: i64, z: i64) {
+pub fn voxel_generate_terrain(x: i64, y: i64, z: i64) -> BlockData {
+    static SSN: std::sync::LazyLock<SuperSimplex> = std::sync::LazyLock::new(|| SuperSimplex::new(42));
+
+    return BlockData {
+        non_void: SSN.get([(x as f64 / 16.) , (y as f64 / 16.) , (z as f64 / 16.) ]) > 0.5
+    };
+}
+
+pub fn chunk_generate_terrain(cx: i64, cy: i64, cz: i64) -> ChunkData {
+    let range = -CHUNK_SIZE/2..CHUNK_SIZE/2;
+    let voxel_count = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+    let mut block_data = Vec::with_capacity(voxel_count as usize);
+
+    for y in range.clone() {
+    for z in range.clone() {
+    for x in range.clone() {
+        let (x, y, z) = (x + CHUNK_SIZE * cx, y + CHUNK_SIZE * cy, z + CHUNK_SIZE * cz);
+        block_data.push(voxel_generate_terrain(x, y, z));
+    }}};
+
+    ChunkData {
+        cx, cy, cz,
+        block_data: block_data.into_boxed_slice()
+    }
+}
+
+
+fn voxel_build_geometry(vmesh: &mut VecMesh, x: i64, y: i64, z: i64) {
     if !get_block_data(x, y, z).non_void { return }
     for (dx, dy, dz) in [
         (-1, 0, 0),
@@ -126,7 +162,7 @@ fn generate_voxel_mesh(vmesh: &mut VecMesh, x: i64, y: i64, z: i64) {
 }
 
 
-pub fn generate_chunk(
+pub fn chunk_build_geometry(
     rl: &mut RaylibHandle,
     thread: &RaylibThread,
     cx: i64, cy: i64, cz: i64
@@ -136,8 +172,8 @@ pub fn generate_chunk(
     for x in -16..16 {
     for y in -16..16 {
     for z in -16..16 {
-        let (x, y, z) = (x + 32 * cx, y + 32 * cy, z + 32 * cz);
-        generate_voxel_mesh(&mut vmesh, x, y, z);
+        let (x, y, z) = (x + CHUNK_SIZE * cx, y + CHUNK_SIZE * cy, z + CHUNK_SIZE * cz);
+        voxel_build_geometry(&mut vmesh, x, y, z);
     }}}
 
 
