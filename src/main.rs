@@ -1,10 +1,12 @@
 use raylib::prelude::*;
 
-use crate::world::generation::generate_chunk;
+mod mesh_tools;
+mod camera_controls;
+mod world;
+
+use camera_controls::{Player, update_camera};
 use crate::world::world::World;
 
-mod mesh_tools;
-mod world;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -17,12 +19,7 @@ fn main() {
         .highdpi()
         .build();
 
-    let mut camera = Camera3D::perspective(
-        Vector3::new(3.0, 3.0, 3.0),
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        45.0,
-    );
+    let mut player = Player::new();
 
     let mut first_click = false;
     let mut debug_display = false; // toggle
@@ -33,18 +30,12 @@ fn main() {
         t.unwrap()
     };
 
-    let mut world: World = World::new();
-    for cx in -4..4 {
-        for cy in -4..4 {
-            for cz in -4..4 {
-                world.generate_chunk(cx, cy, cz, &mut rl, &thread, texture);
-            }
-        }
-    }
     // FIXME: I will be back one day, borrow checker...
     // let rl_ref = & rl;
     // let thread_ref = &thread;
     // let mut models: Vec<Model> = (-8..8).flat_map(|cx| (-8..8).flat_map(move |cy| (-8..8).map(move |cz| generate_chunk(rl_ref, thread_ref, cx, cy, cz)))).collect();
+
+    let mut world = World::new();
 
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
@@ -55,16 +46,18 @@ fn main() {
                 rl.disable_cursor();
             }
         } else {
-            rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
+            // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
+            update_camera(&mut player, &mut rl);
         }
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
             debug_display = !debug_display;
         }
 
+
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
-            world.render(&mut d, camera);
+            world.render(&mut d, player.camera);
 
             if !first_click {
                 d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
@@ -73,7 +66,9 @@ fn main() {
                 let mut debug_info = String::new();
                 debug_info += &format!(
                     "Camera position: {:.4} {:.4} {:.4}\n",
-                    camera.position.x, camera.position.y, camera.position.z
+                    player.camera.position.x,
+                    player.camera.position.y,
+                    player.camera.position.z
                 );
                 debug_info += &format!(
                     "FPS: {}\n",
@@ -82,5 +77,8 @@ fn main() {
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
         });
+
+        world.generate_next_chunk(&mut rl, &thread, texture);
+
     }
 }
