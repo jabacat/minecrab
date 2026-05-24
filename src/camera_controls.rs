@@ -8,15 +8,19 @@ mod keys {
     pub const RIGH: KeyboardKey = KEY_D;
     pub const UPPP: KeyboardKey = KEY_SPACE;
     pub const DOWN: KeyboardKey = KEY_LEFT_SHIFT;
+
+    pub const SPEED_DEC: KeyboardKey = KEY_LEFT_BRACKET;
+    pub const SPEED_INC: KeyboardKey = KEY_RIGHT_BRACKET;
 }
 
-const SPEED: f32 = 0.01;
+const DEFAULT_SPEED: f32 = 0.01;
 const FRICTION: f32 = 0.05;
 const MOUSE_SENS: f32 = 0.005;
 
 // "Player". Controls the current position and their momentum.
 pub struct Player {
     pub camera: Camera3D,
+    pub speed: f32,
     pub momentum: Vector3,
     pub view_azim: f32,
     pub view_elev: f32,
@@ -40,6 +44,7 @@ impl Player {
                 Vector3::new(0.0, 1.0, 0.0),
                 45.0,
             ),       
+            speed: DEFAULT_SPEED,
             momentum: Vector3{x: 0.0, y: 0.0, z: 0.0},
             view_azim,
             view_elev
@@ -61,6 +66,9 @@ fn movement_smooth(from: f32, to: f32) -> f32 {
 pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
     let mouse_delta = rl.get_mouse_delta();
 
+    if rl.is_key_pressed(keys::SPEED_INC) { player.speed *= 2.0; }
+    else if rl.is_key_pressed(keys::SPEED_DEC) { player.speed /= 2.0; }
+
     player.view_azim += mouse_delta.x * MOUSE_SENS;
     player.view_elev -= mouse_delta.y * MOUSE_SENS;
 
@@ -76,9 +84,6 @@ pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
         y: elev_sin,
         z: azim_sin * elev_cos,
     };
-
-    player.camera.position += player.momentum * SPEED;
-    player.camera.target = player.camera.position + forward;
 
     let ipx = get_input_axis(rl, keys::LEFT, keys::RIGH);
     let ipy = get_input_axis(rl, keys::DOWN, keys::UPPP);
@@ -102,4 +107,7 @@ pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
         y: movement_smooth(player.momentum.y, raw_momentum.y),
         z: movement_smooth(player.momentum.z, raw_momentum.z),
     };
+    
+    player.camera.position += player.momentum * player.speed;
+    player.camera.target = player.camera.position + forward;
 }
