@@ -1,7 +1,11 @@
-use std::{collections::{HashSet, VecDeque}, os::unix::thread};
+use std::{collections::{HashSet, VecDeque}};
 
 use noise::{NoiseFn, SuperSimplex};
 use raylib::prelude::*;
+
+use crate::mesh_tools::VecMesh;
+
+mod mesh_tools;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -263,35 +267,13 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
                     dbg!(indices.len());
                     dbg!(indices.len() % 6);
 
-                    // FIXME: surely there is also a better way of zero-initializing a struct
-                    let raw_mesh = raylib::ffi::Mesh {
-                        // relevant stuff
-                        vertices: vertices.as_mut_ptr(),
-                        normals: normals.as_mut_ptr(),
-                        texcoords: tex_coords.as_mut_ptr(),
-                        indices: indices.as_mut_ptr(),
-                        vertexCount: (vertices.len() / 3) as i32,
-                        triangleCount: (indices.len() / 3) as i32,
+                    let mut vmesh = VecMesh::new();
+                    vmesh.vertices = vertices;
+                    vmesh.normals = normals;
+                    vmesh.texcoords = tex_coords;
+                    vmesh.indices = indices;
 
-                        // irrelevant stuff
-                        // I believe the unused fields should be set to null in C
-                        // The usage I found zero initialized the struct and then
-                        // modified fields as needed, so I tried to match that
-                        texcoords2: std::ptr::null_mut(),
-                        tangents: std::ptr::null_mut(),
-                        colors: std::ptr::null_mut(),
-                        boneCount: 0,
-                        boneIndices: std::ptr::null_mut(),
-                        boneWeights: std::ptr::null_mut(),
-                        animVertices: std::ptr::null_mut(),
-                        animNormals: std::ptr::null_mut(),
-
-                        // FIXME: confirm that these are initialized somewhere else
-                        vaoId: 0,
-                        vboId: std::ptr::null_mut(),
-                    };
-
-                    let mut mesh = unsafe { Mesh::from_raw(raw_mesh) };
+                    let mut mesh = vmesh.to_mesh();
                     unsafe { mesh.upload(false) };
 
                     // FIXME: my theory is that vao and vbo should now be initialized
