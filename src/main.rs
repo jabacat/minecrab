@@ -25,17 +25,6 @@ fn main() {
 
     let mut first_click = false;
 
-    // let ssn = SuperSimplex::new(42);
-    // let blocks: Vec<[f32; 3]> = (-16..16)
-    //     .flat_map(|x| {
-    //         (-16..16).flat_map(|y| {
-    //             (-16..16).map(|z| [(x / 16.) as f64, (y / 16.) as f64, (z / 16.) as f64])
-    //         })
-    //     })
-    //     .filter(|c| ssn.get(*c) > 0.5)
-    //     // .map(|c| [c[0] as f32, c[1] as f32, c[2] as f32])
-    //     .collect();
-
     let texture = unsafe {
         let mut t = rl.load_texture(&thread, "assets/full-textures.png").unwrap();
         t.gen_texture_mipmaps();
@@ -46,7 +35,6 @@ fn main() {
     
     let materials = model.materials_mut();
     let material = &mut materials[0];
-
     let maps = material.maps_mut();
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
@@ -65,6 +53,10 @@ fn main() {
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
+            d.draw_mode3D(camera, |mut d2, _camera| {
+                d2.draw_model(&model, Vector3::zero(), 1.0, Color::WHITE);
+            });
+
             if !first_click {
                 d.draw_text(
                     "WIP: Click to start updating camera",
@@ -74,18 +66,6 @@ fn main() {
                     Color::DARKGREEN,
                 );
             }
-
-            d.draw_mode3D(camera, |mut d2, _camera| {
-                d2.draw_model(&model, Vector3::zero(), 1.0, Color::WHITE);
-                
-                // for c in blocks {
-                //     let [x, y, z] = c;
-                //     d2.draw_cube(Vector3::new(x, y, z), 1.0, 1.0, 1., Color::DARKGREEN);
-                // }
-                
-                
-                // d2.draw_cube(Vector3::new(0.0, 0.0, 0.0), 1.0, 1.0, 1.0, Color::DARKGREEN);
-            });
         });
     }
 }
@@ -259,14 +239,4 @@ fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, 
     let model = rl.load_model_from_mesh(thread, unsafe { mesh.make_weak() }).unwrap();
 
     model
-
-    /* let blocks: Vec<[f32; 3]> = (-16..16)
-        .flat_map(|x| {
-            (-16..16).flat_map(|y| {
-                (-16..16).map(|z| [(x / 16.) as f64, (y / 16.) as f64, (z / 16.) as f64])
-            })
-        })
-        .filter(|c| ssn.get(*c) > 0.5)
-        // .map(|c| [c[0] as f32, c[1] as f32, c[2] as f32])
-        .collect(); */
 }
