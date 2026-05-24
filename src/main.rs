@@ -11,6 +11,8 @@ use crate::world::world::World;
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
 
+const FRAMES_PER_CHUNK: i32 = 5;
+
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
@@ -36,6 +38,8 @@ fn main() {
     // let mut models: Vec<Model> = (-8..8).flat_map(|cx| (-8..8).flat_map(move |cy| (-8..8).map(move |cz| generate_chunk(rl_ref, thread_ref, cx, cy, cz)))).collect();
 
     let mut world = World::new();
+
+    let mut frame = 0;
 
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
@@ -78,7 +82,10 @@ fn main() {
             }
         });
 
-        world.generate_next_chunk(&mut rl, &thread, texture);
+        if frame % FRAMES_PER_CHUNK == 0 {
+            world.generate_next_chunk(&mut rl, &thread, texture);
+        }
+        frame += 1;
 
     }
 }
