@@ -5,7 +5,7 @@ mod camera_controls;
 mod world;
 
 use camera_controls::{Player, update_camera};
-use world::generation::World;
+use world::World;
 
 
 const WINDOW_WIDTH: i32 = 1280;
