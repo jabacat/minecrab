@@ -3,9 +3,20 @@ use raylib::prelude::*;
 
 use crate::mesh_tools::VecMesh;
 
-pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, cx: i64, cy: i64, cz: i64) -> Model {
-    let ssn = SuperSimplex::new(42);
+pub struct BlockData {
+    non_void: bool
+}
 
+pub fn get_block_data(x: i64, y: i64, z: i64) -> BlockData {
+    static SSN: std::sync::LazyLock<SuperSimplex> = std::sync::LazyLock::new(|| SuperSimplex::new(42));
+
+    BlockData {
+        non_void: SSN.get([(x as f64 / 16.) , (y as f64 / 16.) , (z as f64 / 16.) ]) > 0.5
+    }
+}
+
+
+pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, cx: i64, cy: i64, cz: i64) -> Model {
     let mut vertices: Vec<f32> = Vec::new();
     let mut normals: Vec<f32> = Vec::new();
     let mut tex_coords: Vec<f32> = Vec::new();
@@ -15,7 +26,7 @@ pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, cx: i64, cy:
         for y in -16..16 {
             for z in -16..16 {
                 let (x, y, z) = (x + 32 * cx, y + 32 * cy, z + 32 * cz);
-                if ssn.get([(x as f64 / 16.) , (y as f64 / 16.) , (z as f64 / 16.) ]) > 0.5 {
+                if get_block_data(x, y, z).non_void {
                     for (dx, dy, dz) in [
                         (1, 0, 0),
                         (-1, 0, 0),
@@ -24,11 +35,7 @@ pub fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, cx: i64, cy:
                         (0, 0, 1),
                         (0, 0, -1),
                     ] {
-                        if ssn.get([
-                            ((x + dx) as f64 / 16.),
-                            ((y + dy) as f64 / 16.),
-                            ((z + dz) as f64 / 16.),
-                        ]) > 0.5
+                        if get_block_data(x + dx, y + dy, z + dz).non_void
                         {
                             continue;
                         }
