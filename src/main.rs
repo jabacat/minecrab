@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::{collections::{HashSet, VecDeque}, os::unix::thread};
 
 use noise::{NoiseFn, SuperSimplex};
 use raylib::prelude::*;
@@ -34,16 +34,20 @@ fn main() {
     //     // .map(|c| [c[0] as f32, c[1] as f32, c[2] as f32])
     //     .collect();
 
-    let texture =  {
+    let texture = unsafe {
         let mut t = rl.load_texture(&thread, "assets/full-textures.png").unwrap();
         t.gen_texture_mipmaps();
-        t
+        t.unwrap()
     };
 
-    let meshes = generate_chunk(0, 0, 0);
-    dbg!(meshes.len());
-    let mut material = rl.load_material_default(&thread);
-    material.set_material_texture(MaterialMapIndex::MATERIAL_MAP_ALBEDO, texture);
+    let models = generate_chunk(&mut rl, &thread, 0, 0, 0);
+    dbg!(models.len());
+    // models.iter().map(|m| {
+    //     let materials = m.materials_mut();
+    //     let material = &mut materials[0];
+    // })
+    // let mut material = rl.load_material_default(&thread);
+    // material.set_material_texture(MaterialMapIndex::MATERIAL_MAP_ALBEDO, texture);
 
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
@@ -72,10 +76,11 @@ fn main() {
 
             d.draw_mode3D(camera, |mut d2, _camera| {
                 // FIXME: how do I fix this move error
-                let material = material.clone();
+                // let material = material.clone();
 
-                for mesh in &meshes {
-                    d2.draw_mesh(mesh, material.clone(), Matrix::identity());
+                for model in &models {
+                    d2.draw_model_wires(model, Vector3::zero(), 1.0, Color::DARKGREEN);
+                    // d2.draw_mesh(model, material.clone(), Matrix::identity());
                 }
                 
                 // for c in blocks {
@@ -92,9 +97,9 @@ fn main() {
 
 
 // FIXME: use x y z offsets properly
-fn generate_chunk(x: i64, y: i64, z: i64) -> Vec<Mesh> {
+fn generate_chunk(rl: &mut RaylibHandle, thread: &RaylibThread, x: i64, y: i64, z: i64) -> Vec<Model> {
     let ssn = SuperSimplex::new(42);
-    let mut meshes: Vec<Mesh> = Vec::new();
+    let mut models: Vec<Model> = Vec::new();
 
     let mut seen = HashSet::new();
 
@@ -302,13 +307,13 @@ fn generate_chunk(x: i64, y: i64, z: i64) -> Vec<Mesh> {
                     // dbg!(mesh.to_raw().vaoId);
                     // dbg!(mesh.to_raw().vboId);
 
-                    meshes.push(mesh);
+                    models.push(rl.load_model_from_mesh(thread, unsafe { mesh.make_weak() }).unwrap());
                 }
             }
         }
     }
 
-    meshes
+    models
 
     /* let blocks: Vec<[f32; 3]> = (-16..16)
         .flat_map(|x| {
