@@ -16,7 +16,13 @@ This project is for us to practice our development skills and build something co
 
 ## Build Instructions
 
-## macOS
+### macOS
 
 Assuming you have installed GLFW via Homebrew, run `source scripts/macos-setup.sh`
 one per command linesession to get the correct Rust compilation flags.
+
+## Assets
+
+Our main texture atlas is 320x320 px and contains all of our textures. Each time it is changed, we increment the
+version number and commit both the source xcf and png files. The textures start on the bottom left and more will
+be added later.
