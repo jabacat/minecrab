@@ -32,12 +32,25 @@ fn main() {
         t.unwrap()
     };
 
-    let mut model = generate_chunk(&mut rl, &thread, 0, 0, 0);
+    let mut models: Vec<Model> = Vec::new();
+    for cx in -4..4 {
+        for cy in -4..4 {
+            for cz in -4..4 {
+                models.push(generate_chunk(&mut rl, &thread, cx, cy, cz));
+            }
+        }
+    }
+    // FIXME: I will be back one day, borrow checker...
+    // let rl_ref = & rl;
+    // let thread_ref = &thread;
+    // let mut models: Vec<Model> = (-8..8).flat_map(|cx| (-8..8).flat_map(move |cy| (-8..8).map(move |cz| generate_chunk(rl_ref, thread_ref, cx, cy, cz)))).collect();
     
-    let materials = model.materials_mut();
-    let material = &mut materials[0];
-    let maps = material.maps_mut();
-    maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
+    models.iter_mut().for_each(|model| {
+        let materials = model.materials_mut();
+        let material = &mut materials[0];
+        let maps = material.maps_mut();
+        maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
+    });
 
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
@@ -58,7 +71,9 @@ fn main() {
             d.clear_background(Color::LIGHTBLUE);
 
             d.draw_mode3D(camera, |mut d2, _camera| {
-                d2.draw_model(&model, Vector3::zero(), 1.0, Color::WHITE);
+                for model in &models {
+                    d2.draw_model(model, Vector3::zero(), 1., Color::WHITE);
+                }
             });
 
             if !first_click {
@@ -67,11 +82,11 @@ fn main() {
             if debug_display {
                 let mut debug_info = String::new();
                 debug_info += &format!(
-                    "Camera position: {:.4} {:.4} {:.4}\n", 
+                    "Camera position: {:.4} {:.4} {:.4}\n",
                     camera.position.x, camera.position.y, camera.position.z
                 );
                 debug_info += &format!(
-                    "FPS: {}\n", 
+                    "FPS: {}\n",
                     d.get_fps()
                 );
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
