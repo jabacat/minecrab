@@ -24,6 +24,7 @@ fn main() {
     );
 
     let mut first_click = false;
+    let mut debug_display = false; // toggle
 
     let texture = unsafe {
         let mut t = rl.load_texture(&thread, "assets/full-textures.png").unwrap();
@@ -49,6 +50,9 @@ fn main() {
         } else {
             rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
         }
+        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
+            debug_display = !debug_display;
+        }
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
@@ -58,13 +62,19 @@ fn main() {
             });
 
             if !first_click {
-                d.draw_text(
-                    "WIP: Click to start updating camera",
-                    20,
-                    20,
-                    16,
-                    Color::DARKGREEN,
+                d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
+            }
+            if debug_display {
+                let mut debug_info = String::new();
+                debug_info += &format!(
+                    "Camera position: {:.4} {:.4} {:.4}\n", 
+                    camera.position.x, camera.position.y, camera.position.z
                 );
+                debug_info += &format!(
+                    "FPS: {}\n", 
+                    d.get_fps()
+                );
+                d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
         });
     }
