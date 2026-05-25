@@ -72,6 +72,9 @@ pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
     player.view_azim += mouse_delta.x * MOUSE_SENS;
     player.view_elev -= mouse_delta.y * MOUSE_SENS;
 
+    // Avoid vertical singularities
+    player.view_elev = player.view_elev.clamp(-1.57, 1.57);
+
     let (azim_cos, azim_sin) = (player.view_azim.cos(), player.view_azim.sin());
 
     let flat_forward = Vector3 { x: azim_cos, y: 0.0, z: azim_sin };
