@@ -83,9 +83,9 @@ impl World {
 
     pub fn get_chunk_coords_of_block(x: i64, y: i64, z: i64) -> (i64, i64, i64) {
         (
-            if x >= 0 { x / CHUNK_SIZE } else { x / CHUNK_SIZE - 1 },
-            if y >= 0 { y / CHUNK_SIZE } else { y / CHUNK_SIZE - 1 },
-            if z >= 0 { z / CHUNK_SIZE } else { z / CHUNK_SIZE - 1 },
+            if x >= 0 { x / CHUNK_SIZE } else { (x+1) / CHUNK_SIZE - 1 },
+            if y >= 0 { y / CHUNK_SIZE } else { (y+1) / CHUNK_SIZE - 1 },
+            if z >= 0 { z / CHUNK_SIZE } else { (z+1) / CHUNK_SIZE - 1 },
         )
     }
 
@@ -141,7 +141,7 @@ impl World {
         let r = 0..CHUNK_SIZE;
 
         for y in r.clone() { for z in r.clone() { for x in r.clone() {
-            let (x, y, z) = (
+            let (wx, wy, wz) = (
                 /* FIXME: this is definitely broken on negative numbers
                  * . or something around here is.
                  * i'm too tired to debug this, gotta wake up early tomorrow
@@ -150,7 +150,7 @@ impl World {
                 y + CHUNK_SIZE * cy,
                 z + CHUNK_SIZE * cz
             );
-            self.generate_terrain_voxel(x, y, z);
+            self.generate_terrain_voxel(wx, wy, wz);
         }}};
     }
  
@@ -308,15 +308,12 @@ impl World {
             return;
         }
 
-        /* something's broken on negative coordinates. don't have time to fix */
-        let tempfix = WORLD_RADIUS;
-
         self.generate_terrain_chunk(
-            self.next_gen_x + tempfix, self.next_gen_y + tempfix, self.next_gen_z + tempfix
+            self.next_gen_x, self.next_gen_y, self.next_gen_z
         );
 
         self.build_geometry_chunk(
-            self.next_gen_x + tempfix, self.next_gen_y + tempfix, self.next_gen_z + tempfix
+            self.next_gen_x, self.next_gen_y, self.next_gen_z
         );
 
         self.next_gen_z += 1;
