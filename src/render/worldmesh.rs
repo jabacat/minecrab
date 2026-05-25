@@ -152,7 +152,7 @@ pub fn build_geometry_chunk(world: &mut World, cx: i64, cy: i64, cz: i64) -> Mes
 pub struct WorldRenderer {
     // Right now, all we need is a list of meshes to render.
     // IN THE FUTURE, this should be a map of some sort.
-    chunk_meshes: Vec<Option<Mesh>>,
+    chunk_meshes: Vec<Mesh>,
     material: WeakMaterial,
 }
 
@@ -166,13 +166,13 @@ impl WorldRenderer {
     }
 
     pub fn add_mesh(&mut self, mesh: Mesh) {
-        self.chunk_meshes.push(Some(mesh))
+        self.chunk_meshes.push(mesh)
     }
 
     pub fn render(&mut self, d: &mut RaylibDrawHandle, camera: Camera3D) {
         d.draw_mode3D(camera, |mut d2, _camera| {
             for mesh in &self.chunk_meshes {
-                d2.draw_mesh(mesh.as_ref().unwrap(), self.material.clone(), Matrix::identity());
+                d2.draw_mesh(mesh, self.material.clone(), Matrix::identity());
             }
         });
     }
