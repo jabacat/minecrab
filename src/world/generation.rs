@@ -108,7 +108,7 @@ impl World {
         }
     }
 
-    fn generate_terrain_voxel(self: &mut Self, x: i64, y: i64, z: i64) {
+    fn generate_terrain_column(self: &mut Self, x: i64, z: i64, cy: i64) { // generate in columns to avoid unnecessary regeneration
         static SSN: std::sync::LazyLock<SuperSimplex> =
             std::sync::LazyLock::new(|| SuperSimplex::new(42));
 
@@ -116,25 +116,24 @@ impl World {
 
         let sample_point = [
             ((x as f64 / noise_scale)),
-            // (y as f64 / noise_scale), // to get a height map
-            0_f64, 
             ((z as f64 / noise_scale))
         ];
 
         let height = (SSN.get(sample_point) + 5_f64) * 12_f64; 
 
-        let block_data = if height < y as f64 {
-            BlockData::AIR
-        } else if height < (y - 1) as f64 {
-            BlockData::GRASS
-        } else if height > 4_f64 {
-            BlockData::STONE
-        } else {
-            BlockData::BEDROCK
-        };
-
-
-        self.set_block_data(x, y, z, block_data);
+        for y in (CHUNK_SIZE*cy)..(CHUNK_SIZE*(cy+1)) { // compiler can probably optimize this
+            let block_data = if height < y as f64 {
+                BlockData::AIR
+            } else if height < (y - 1) as f64 {
+                BlockData::GRASS
+            } else if height > 4_f64 {
+                BlockData::STONE
+            } else {
+                BlockData::BEDROCK
+            };
+    
+            self.set_block_data(x, y, z, block_data);
+        }
     }
 
     pub fn generate_terrain_chunk(self: &mut Self, cx: i64, cy: i64, cz: i64) {
@@ -144,14 +143,14 @@ impl World {
 
         let r = 0..CHUNK_SIZE;
 
-        for y in r.clone() { for z in r.clone() { for x in r.clone() {
-            let (wx, wy, wz) = (
+        for z in r.clone() { for x in r.clone() {
+            let (wx, wz) = (
                 x + CHUNK_SIZE * cx,
-                y + CHUNK_SIZE * cy,
                 z + CHUNK_SIZE * cz
             );
-            self.generate_terrain_voxel(wx, wy, wz);
-        }}};
+            self.generate_terrain_column(wx, wz, cy);
+            }
+        };
     }
     
     pub fn generate_next_chunk(self: &mut Self, world_renderer: &mut worldmesh::WorldRenderer) {
