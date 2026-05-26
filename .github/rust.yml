@@ -40,7 +40,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       
       - name: Test
-        run: cargo test unit_test --verbose
+        run: cargo test --verbose
 
   format:
     runs-on: ubuntu-latest
