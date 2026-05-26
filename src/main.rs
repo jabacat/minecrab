@@ -1,12 +1,14 @@
 use raylib::prelude::*;
 
-mod mesh_tools;
-mod camera_controls;
+mod player;
+mod render;
 mod world;
 
-use camera_controls::{Player, update_camera_angle, update_camera_position};
+use player::{Player, update_camera_angle, update_camera_position};
 use world::generation::World;
 
+use crate::render::mesh_tools;
+use crate::render::worldmesh::WorldRenderer;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -43,6 +45,7 @@ fn main() {
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
     let mut world = World::new();
+    let mut world_renderer: WorldRenderer = WorldRenderer::new(material);
 
     let mut frame: i32 = 0;
     
@@ -71,11 +74,7 @@ fn main() {
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
-            d.draw_mode3D(player.camera, |mut d2, _camera| {
-                for (_, chunk) in &world.chunks {
-                    d2.draw_mesh(chunk.mesh.as_ref().unwrap(), material.clone(), Matrix::identity());
-                }
-            });
+            world_renderer.render(&mut d, player.camera);
 
             if !first_click {
                 d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
@@ -97,7 +96,7 @@ fn main() {
         });
 
         if frame % FRAMES_PER_CHUNK == 0 {
-            world.generate_next_chunk();
+            world.generate_next_chunk(&mut world_renderer);
         }
         frame += 1;
     }
