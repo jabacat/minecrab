@@ -1,10 +1,10 @@
 use raylib::prelude::*;
 
 mod mesh_tools;
-mod camera_controls;
+mod player;
 mod world;
 
-use camera_controls::{Player, update_camera};
+use player::{Player, update_camera};
 use world::generation::World;
 
 
