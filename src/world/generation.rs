@@ -1,5 +1,4 @@
 use noise::{NoiseFn, SuperSimplex};
-use raylib::prelude::*;
 
 use std::collections::HashMap;
 

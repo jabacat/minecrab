@@ -29,22 +29,6 @@ impl VecMesh {
         };
     }
 
-    pub fn push_vertex(self: &mut Self, v: Vector3) {
-        self.vertices.extend_from_slice(&[v.x, v.y, v.z]);
-    }
-    pub fn push_texcoord(self: &mut Self, tc: Vector2) {
-        self.texcoords.extend_from_slice(&[tc.x, tc.y]);
-    }
-    pub fn push_normal(self: &mut Self, n: Vector3) {
-        self.normals.extend_from_slice(&[n.x, n.y, n.z]);
-    }
-    pub fn push_tangent(self: &mut Self, t: Vector3) {
-        self.tangents.extend_from_slice(&[t.x, t.y, t.z]);
-    }
-    pub fn push_color(self: &mut Self, c: Color) {
-        self.colors.extend_from_slice(&[c.r, c.g, c.b]);
-    }
-
     pub fn to_mesh(mut self: VecMesh) -> Mesh {
         let vertex_count = (self.vertices.len() / 3) as i32;
         let triangle_count =
