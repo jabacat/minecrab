@@ -34,7 +34,7 @@ jobs:
       - name: Install Depends
         run: |
           sudo apt update
-          sudo apt install cmake glfw3
+          sudo apt install cmake glfw
   
       - uses: actions-rs/toolchain@v1
         with:
@@ -46,7 +46,7 @@ jobs:
       - name: Install Depends
         run: |
           sudo apt update
-          sudo apt install cmake glfw3
+          sudo apt install cmake glfw
       
       - name: Test
         run: cargo test --verbose
@@ -60,7 +60,7 @@ jobs:
       - name: Install Depends
         run: |
           sudo apt update
-          sudo apt install cmake glfw3
+          sudo apt install cmake glfw
       
       - uses: actions-rs/toolchain@v1
         with:
