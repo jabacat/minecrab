@@ -2,7 +2,7 @@ use raylib::prelude::*;
 
 use crate::mesh_tools::VecMesh;
 use crate::world::blocks::{BlockData, GRASS_COORDS};
-use crate::world::generation::{Chunk, CHUNK_SIZE, World};
+use crate::world::generation::{CHUNK_SIZE, World};
 
 pub fn build_geometry_voxel(
     world: &mut World, vmesh: &mut VecMesh, x: i64, y: i64, z: i64
