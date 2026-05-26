@@ -32,22 +32,23 @@ impl Player {
         let view_azim: f32 = -2.3;
         let view_elev: f32 = -0.8;
 
-        let target = pos + Vector3 {
+        let target = pos
+            + Vector3 {
                 x: view_azim.cos() * view_elev.cos(),
                 y: view_elev.sin(),
-                z: view_azim.sin() * view_elev.cos()
+                z: view_azim.sin() * view_elev.cos(),
             };
 
         return Player {
-            camera: Camera3D::perspective(
-                pos, target,
-                Vector3::new(0.0, 1.0, 0.0),
-                45.0,
-            ),       
+            camera: Camera3D::perspective(pos, target, Vector3::new(0.0, 1.0, 0.0), 45.0),
             speed: DEFAULT_SPEED,
-            momentum: Vector3{x: 0.0, y: 0.0, z: 0.0},
+            momentum: Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             view_azim,
-            view_elev
+            view_elev,
         };
     }
 }
@@ -64,8 +65,11 @@ fn movement_smooth(from: f32, to: f32) -> f32 {
 pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
     let mouse_delta = rl.get_mouse_delta();
 
-    if rl.is_key_pressed(keys::SPEED_INC) { player.speed *= 2.0; }
-    else if rl.is_key_pressed(keys::SPEED_DEC) { player.speed /= 2.0; }
+    if rl.is_key_pressed(keys::SPEED_INC) {
+        player.speed *= 2.0;
+    } else if rl.is_key_pressed(keys::SPEED_DEC) {
+        player.speed /= 2.0;
+    }
 
     player.view_azim += mouse_delta.x * MOUSE_SENS;
     player.view_elev -= mouse_delta.y * MOUSE_SENS;
@@ -75,9 +79,17 @@ pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
 
     let (azim_cos, azim_sin) = (player.view_azim.cos(), player.view_azim.sin());
 
-    let flat_forward = Vector3 { x: azim_cos, y: 0.0, z: azim_sin };
-    let right = Vector3 { x: -azim_sin, y: 0.0, z: azim_cos };
-    
+    let flat_forward = Vector3 {
+        x: azim_cos,
+        y: 0.0,
+        z: azim_sin,
+    };
+    let right = Vector3 {
+        x: -azim_sin,
+        y: 0.0,
+        z: azim_cos,
+    };
+
     let (elev_cos, elev_sin) = (player.view_elev.cos(), player.view_elev.sin());
 
     let forward = Vector3 {
@@ -97,18 +109,15 @@ pub fn update_camera(player: &mut Player, rl: &mut RaylibHandle) {
     } else {
         (ipx, ipy)
     };
-    
-    let raw_momentum = 
-        right * ipx
-        + Vector3::new(0.0, 1.0, 0.0) * ipy
-        + flat_forward * ipz;
+
+    let raw_momentum = right * ipx + Vector3::new(0.0, 1.0, 0.0) * ipy + flat_forward * ipz;
 
     player.momentum = Vector3 {
         x: movement_smooth(player.momentum.x, raw_momentum.x),
         y: movement_smooth(player.momentum.y, raw_momentum.y),
         z: movement_smooth(player.momentum.z, raw_momentum.z),
     };
-    
+
     player.camera.position += player.momentum * player.speed;
     player.camera.target = player.camera.position + forward;
 }

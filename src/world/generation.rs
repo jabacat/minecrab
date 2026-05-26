@@ -12,7 +12,9 @@ const WORLD_RADIUS: i64 = 2;
 pub struct Chunk {
     /* absolute chunk coordinates
      * 1 unit = CHUNK_SIZE blocks */
-    cx: i64, cy: i64, cz: i64,
+    cx: i64,
+    cy: i64,
+    cz: i64,
 
     /* always must have length CHUNK_SIZE ^ 3
      *
@@ -30,7 +32,7 @@ pub struct World {
     next_gen_y: i64,
     next_gen_z: i64,
 
-    pub chunks: HashMap<(i64, i64, i64), Chunk>
+    pub chunks: HashMap<(i64, i64, i64), Chunk>,
 }
 
 impl Chunk {
@@ -42,7 +44,12 @@ impl Chunk {
             voxels.push(BlockData { non_void: false });
         }
 
-        Self { cx, cy, cz, voxels: voxels.into_boxed_slice() }
+        Self {
+            cx,
+            cy,
+            cz,
+            voxels: voxels.into_boxed_slice(),
+        }
     }
 
     pub fn get_block_data(self: &Self, x: i64, y: i64, z: i64) -> BlockData {
@@ -52,12 +59,12 @@ impl Chunk {
     pub fn set_block_data(self: &mut Self, x: i64, y: i64, z: i64, value: BlockData) {
         self.voxels[self.get_block_idx(x, y, z)] = value;
     }
-    
+
     fn get_block_idx(self: &Self, x: i64, y: i64, z: i64) -> usize {
         let (lx, ly, lz) = (
             x - self.cx * CHUNK_SIZE,
             y - self.cy * CHUNK_SIZE,
-            z - self.cz * CHUNK_SIZE
+            z - self.cz * CHUNK_SIZE,
         );
         let idx = ly * CHUNK_SIZE * CHUNK_SIZE + lz * CHUNK_SIZE + lx;
 
@@ -77,9 +84,21 @@ impl World {
 
     pub fn get_chunk_coords_of_block(x: i64, y: i64, z: i64) -> (i64, i64, i64) {
         (
-            if x >= 0 { x / CHUNK_SIZE } else { (x+1) / CHUNK_SIZE - 1 },
-            if y >= 0 { y / CHUNK_SIZE } else { (y+1) / CHUNK_SIZE - 1 },
-            if z >= 0 { z / CHUNK_SIZE } else { (z+1) / CHUNK_SIZE - 1 },
+            if x >= 0 {
+                x / CHUNK_SIZE
+            } else {
+                (x + 1) / CHUNK_SIZE - 1
+            },
+            if y >= 0 {
+                y / CHUNK_SIZE
+            } else {
+                (y + 1) / CHUNK_SIZE - 1
+            },
+            if z >= 0 {
+                z / CHUNK_SIZE
+            } else {
+                (z + 1) / CHUNK_SIZE - 1
+            },
         )
     }
 
@@ -96,9 +115,7 @@ impl World {
     }
 
     /* panics if used in a chunk that hasn't been generated yet */
-    pub fn set_block_data(
-        self: &mut Self, x: i64, y: i64, z: i64, value: BlockData
-    ) {
+    pub fn set_block_data(self: &mut Self, x: i64, y: i64, z: i64, value: BlockData) {
         let (cx, cy, cz) = World::get_chunk_coords_of_block(x, y, z);
 
         if let Some(chunk) = self.chunks.get_mut(&(cx, cy, cz)) {
@@ -117,52 +134,54 @@ impl World {
         let sample_point = [
             (x as f64 / noise_scale),
             (y as f64 / noise_scale),
-            (z as f64 / noise_scale)
+            (z as f64 / noise_scale),
         ];
 
         let block_data = BlockData {
-            non_void: SSN.get(sample_point) > 0.5
+            non_void: SSN.get(sample_point) > 0.5,
         };
 
         self.set_block_data(x, y, z, block_data);
     }
 
     pub fn generate_terrain_chunk(self: &mut Self, cx: i64, cy: i64, cz: i64) {
-        let existing_chunk =
-            self.chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
+        let existing_chunk = self.chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
         assert!(existing_chunk.is_none());
 
         let r = 0..CHUNK_SIZE;
 
-        for y in r.clone() { for z in r.clone() { for x in r.clone() {
-            let (wx, wy, wz) = (
-                /* FIXME: this is definitely broken on negative numbers
-                 * . or something around here is.
-                 * i'm too tired to debug this, gotta wake up early tomorrow
-                 */
-                x + CHUNK_SIZE * cx,
-                y + CHUNK_SIZE * cy,
-                z + CHUNK_SIZE * cz
-            );
-            self.generate_terrain_voxel(wx, wy, wz);
-        }}};
+        for y in r.clone() {
+            for z in r.clone() {
+                for x in r.clone() {
+                    let (wx, wy, wz) = (
+                        /* FIXME: this is definitely broken on negative numbers
+                         * . or something around here is.
+                         * i'm too tired to debug this, gotta wake up early tomorrow
+                         */
+                        x + CHUNK_SIZE * cx,
+                        y + CHUNK_SIZE * cy,
+                        z + CHUNK_SIZE * cz,
+                    );
+                    self.generate_terrain_voxel(wx, wy, wz);
+                }
+            }
+        }
     }
-    
+
     pub fn generate_next_chunk(self: &mut Self, world_renderer: &mut worldmesh::WorldRenderer) {
         if self.next_gen_x > WORLD_RADIUS {
             // No more chunks left to generate.
             return;
         }
 
-        self.generate_terrain_chunk(
-            self.next_gen_x, self.next_gen_y, self.next_gen_z
-        );
+        self.generate_terrain_chunk(self.next_gen_x, self.next_gen_y, self.next_gen_z);
 
-        world_renderer.add_mesh(
-            worldmesh::build_geometry_chunk(
-                self, self.next_gen_x, self.next_gen_y, self.next_gen_z
-            )
-        );
+        world_renderer.add_mesh(worldmesh::build_geometry_chunk(
+            self,
+            self.next_gen_x,
+            self.next_gen_y,
+            self.next_gen_z,
+        ));
 
         self.next_gen_z += 1;
         if self.next_gen_z > WORLD_RADIUS {
@@ -174,9 +193,4 @@ impl World {
             self.next_gen_z = -WORLD_RADIUS;
         }
     }
-
 }
-
-
-
-

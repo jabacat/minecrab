@@ -31,7 +31,9 @@ fn main() {
     let mut debug_display = false; // toggle
 
     let texture: ffi::Texture = unsafe {
-        let mut t = rl.load_texture(&thread, "assets/full-textures.png").unwrap();
+        let mut t = rl
+            .load_texture(&thread, "assets/full-textures.png")
+            .unwrap();
         t.gen_texture_mipmaps();
         t.unwrap()
     };
@@ -44,7 +46,7 @@ fn main() {
     let mut world_renderer: WorldRenderer = WorldRenderer::new(material);
 
     let mut frame: i32 = 0;
-    
+
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
         // doesn't fly away when the cursor enters the window at first
@@ -57,10 +59,10 @@ fn main() {
             // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
             update_camera(&mut player, &mut rl);
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
+        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click {
+            // toggle debug menu
             debug_display = !debug_display;
         }
-
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
@@ -68,20 +70,21 @@ fn main() {
             world_renderer.render(&mut d, player.camera);
 
             if !first_click {
-                d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
+                d.draw_text(
+                    "WIP: Click to start updating camera",
+                    20,
+                    20,
+                    16,
+                    Color::DARKGREEN,
+                );
             }
             if debug_display {
                 let mut debug_info = String::new();
                 debug_info += &format!(
                     "Camera position: {:.4} {:.4} {:.4}\n",
-                    player.camera.position.x,
-                    player.camera.position.y,
-                    player.camera.position.z
+                    player.camera.position.x, player.camera.position.y, player.camera.position.z
                 );
-                debug_info += &format!(
-                    "FPS: {}\n",
-                    d.get_fps()
-                );
+                debug_info += &format!("FPS: {}\n", d.get_fps());
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
         });

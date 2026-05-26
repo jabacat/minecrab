@@ -47,11 +47,11 @@ impl VecMesh {
 
     pub fn to_mesh(mut self: VecMesh) -> Mesh {
         let vertex_count = (self.vertices.len() / 3) as i32;
-        let triangle_count =
-            if self.indices.len() > 0 { self.indices.len() / 3 }
-            else { self.vertices.len() / 9 }
-            as i32;
-
+        let triangle_count = if self.indices.len() > 0 {
+            self.indices.len() / 3
+        } else {
+            self.vertices.len() / 9
+        } as i32;
 
         fn vec_to_ptr<T>(vec: Vec<T>) -> *mut T {
             if vec.len() == 0 {
