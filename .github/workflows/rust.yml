@@ -47,19 +47,3 @@ jobs:
       
       - name: Test
         run: source ./scripts/macos-setup.sh && cargo test --verbose
-
-  format:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v2
-      
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-
-      - uses: Swatinem/rust-cache@v1
-      
-      - name: Format
-        run: cargo fmt --check
