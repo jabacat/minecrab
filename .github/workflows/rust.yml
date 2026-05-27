@@ -24,7 +24,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
 
       - name: Dependencies
-        run: sudo apt install glfw
+        run: sudo apt install glfw-dev
       
       - name: Build
         run: glfw3_DIR=/usr/lib/cmake/glfw3 cargo build --verbose
