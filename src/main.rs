@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 
+mod pause_menu;
 mod player;
 mod render;
 mod world;
@@ -7,6 +8,7 @@ mod world;
 use player::{Player, update_camera_angle, update_camera_position};
 use world::generation::World;
 
+use crate::pause_menu::PauseMenu;
 use crate::render::mesh_tools;
 use crate::render::worldmesh::WorldRenderer;
 
@@ -27,6 +29,9 @@ fn main() {
         .highdpi()
         .build();
 
+    // Disable exit on esc (default raylib behavior)
+    rl.set_exit_key(Some(KeyboardKey::KEY_NULL));
+
     let mut player = Player::new();
 
     let mut t = rl
@@ -46,20 +51,15 @@ fn main() {
 
     let mut frame: i32 = 0;
 
-    let mut first_click = false;
+    let mut pause_menu = PauseMenu::new();
     let mut debug_display = false; // toggle
 
     let mut update_camera_in = 0_f32; // time until we run update_camera()
 
     while !rl.window_should_close() {
-        // require a click on the window before updating camera so the camera
-        // doesn't fly away when the cursor enters the window at first
-        if !first_click {
-            if rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
-                first_click = true;
-                rl.disable_cursor();
-            }
-        } else {
+        pause_menu.update(&mut rl);
+
+        if !pause_menu.paused {
             // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
             update_camera_in -= rl.get_frame_time();
             update_camera_angle(&mut player, &mut rl);
@@ -68,7 +68,7 @@ fn main() {
                 update_camera_in += TICK_LENGTH;
             }
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
+        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) { // toggle debug menu
             debug_display = !debug_display;
         }
 
@@ -78,9 +78,6 @@ fn main() {
 
             world_renderer.render(&mut d, player.camera);
 
-            if !first_click {
-                d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
-            }
             if debug_display {
                 let mut debug_info = String::new();
                 debug_info += &format!(
@@ -95,6 +92,9 @@ fn main() {
                 );
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
+
+            // Render pause menu
+            pause_menu.render(&mut d);
         });
 
         if frame % FRAMES_PER_CHUNK == 0 {
