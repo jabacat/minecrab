@@ -60,7 +60,7 @@ fn main() {
         window_should_close |= rl.window_should_close();
         window_should_close |= pause_menu.update(&mut rl);
 
-        if !pause_menu.paused {
+        if pause_menu.is_running() {
             // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
             update_camera_in -= rl.get_frame_time();
             update_camera_angle(&mut player, &mut rl);
