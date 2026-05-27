@@ -1,10 +1,19 @@
 use raylib::prelude::*;
 
 // useless boilerplate that we could probably do without tbh
-#[derive(Clone, Copy)]
-enum Buttons {
+#[derive(Clone, Copy, PartialEq)]
+enum ButtonType {
     BTG,
     QUIT,
+}
+
+impl ButtonType {
+    fn get_text(&self) -> &str {
+        match self {
+            ButtonType::BTG => "Back to Game",
+            ButtonType::QUIT => "Quit",
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -13,12 +22,12 @@ struct Button {
     y: i32,
     width: i32,
     height: i32,
-    button: Buttons,
+    button: ButtonType,
 }
 
 pub struct PauseMenu {
     pub paused: bool,
-    hover: Option<Buttons>,
+    hover: Option<ButtonType>,
     buttons: Vec<Button>,
 }
 
@@ -56,14 +65,14 @@ impl PauseMenu {
                     && (b.y..(b.y + b.height)).contains(&(my as i32))
                 {
                     match b.button {
-                        Buttons::BTG => {
+                        ButtonType::BTG => {
                             self.paused = false;
                             // FIXME: unnecessary?
                             self.buttons.clear();
                             rl.disable_cursor();
                             return false;
                         }
-                        Buttons::QUIT => {
+                        ButtonType::QUIT => {
                             return true;
                         }
                         _ => (),
@@ -106,73 +115,42 @@ impl PauseMenu {
 
         let font_size = 16;
 
-        let btg_width = 640;
-        let btg_height = 48;
-        let btg_x = (screen_width - btg_width) / 2;
-        let btg_y = (screen_height - btg_height) / 2 - btg_height / 2 - button_margin_y;
+        let button_width = 640;
+        let button_height = 48;
+        let button_x = (screen_width - button_width) / 2;
 
-        self.buttons.push(Button {
-            x: btg_x,
-            y: btg_y,
-            width: btg_width,
-            height: btg_height,
-            button: Buttons::BTG,
-        });
+        let buttons = [ButtonType::BTG, ButtonType::QUIT];
 
-        d.draw_rectangle(
-            btg_x,
-            btg_y,
-            btg_width,
-            btg_height,
-            if matches!(self.hover, Some(Buttons::BTG)) {
-                button_color_active
-            } else {
-                button_color_inactive
-            },
-        );
-        d.draw_rectangle_lines(btg_x, btg_y, btg_width, btg_height, Color::WHITE);
+        let button_y_start = (screen_height - button_height) / 2
+            - (buttons.len() as i32 - 1) / 2 * (button_height + button_margin_y);
 
-        let btg_text_width = d.measure_text("Back to Game", font_size);
-        let btg_text_x = (btg_width - btg_text_width) / 2 + btg_x;
-        let btg_text_y = (btg_height - font_size) / 2 + btg_y;
-        d.draw_text(
-            "Back to Game",
-            btg_text_x,
-            btg_text_y,
-            font_size,
-            Color::WHITE,
-        );
+        for (i, b) in buttons.iter().enumerate() {
+            let by = button_y_start + i as i32 * (button_height + button_margin_y);
+            self.buttons.push(Button {
+                x: button_x,
+                y: by,
+                width: button_width,
+                height: button_height,
+                button: *b,
+            });
 
-        let quit_width = 640;
-        let quit_height = 48;
-        let quit_x = (screen_width - quit_width) / 2;
-        let quit_y = (screen_height - quit_height) / 2 + quit_height / 2 + button_margin_y;
+            d.draw_rectangle(
+                button_x,
+                by,
+                button_width,
+                button_height,
+                if self.hover == Some(*b) {
+                    button_color_active
+                } else {
+                    button_color_inactive
+                },
+            );
+            d.draw_rectangle_lines(button_x, by, button_width, button_height, Color::WHITE);
 
-        self.buttons.push(Button {
-            x: quit_x,
-            y: quit_y,
-            width: quit_width,
-            height: quit_height,
-            button: Buttons::QUIT,
-        });
-
-        d.draw_rectangle(
-            quit_x,
-            quit_y,
-            quit_width,
-            quit_height,
-            if matches!(self.hover, Some(Buttons::QUIT)) {
-                button_color_active
-            } else {
-                button_color_inactive
-            },
-        );
-        d.draw_rectangle_lines(quit_x, quit_y, quit_width, quit_height, Color::WHITE);
-
-        let font_size = 16;
-        let quit_text_width = d.measure_text("Quit", font_size);
-        let quit_text_x = (quit_width - quit_text_width) / 2 + quit_x;
-        let quit_text_y = (quit_height - font_size) / 2 + quit_y;
-        d.draw_text("Quit", quit_text_x, quit_text_y, font_size, Color::WHITE);
+            let text_width = d.measure_text(b.get_text(), font_size);
+            let text_x = (button_width - text_width) / 2 + button_x;
+            let text_y = (button_height - font_size) / 2 + by;
+            d.draw_text(b.get_text(), text_x, text_y, font_size, Color::WHITE);
+        }
     }
 }
