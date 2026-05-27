@@ -1,6 +1,5 @@
 use raylib::prelude::*;
 
-mod pause_menu;
 mod player;
 mod render;
 mod world;
@@ -8,8 +7,8 @@ mod world;
 use player::{Player, update_camera_angle, update_camera_position};
 use world::generation::World;
 
-use crate::pause_menu::PauseMenu;
 use crate::render::mesh_tools;
+use crate::render::pause_menu::PauseMenu;
 use crate::render::worldmesh::WorldRenderer;
 
 const WINDOW_WIDTH: i32 = 1280;
