@@ -73,16 +73,15 @@ const TEX_COORDS_LEAVES: BlockTextureCoordinates = monotextured_block!(0.5, 0.1)
 impl BlockTextureCoordinates {
 
     pub fn new(block_type: BlockData) -> BlockTextureCoordinates {
-    match block_type {
-        BlockData::AIR => TEX_COORDS_AIR,
-        BlockData::GRASS => TEX_COORDS_GRASS,
-        BlockData::DIRT => TEX_COORDS_DIRT,
-        BlockData::STONE => TEX_COORDS_STONE,
-        BlockData::WOOD => TEX_COORDS_WOOD,
-        BlockData::LEAVES => TEX_COORDS_LEAVES,
-        // Not implemented yet!
-        _ => TEX_COORDS_ERROR,
+        match block_type {
+            BlockData::AIR => TEX_COORDS_AIR,
+            BlockData::GRASS => TEX_COORDS_GRASS,
+            BlockData::DIRT => TEX_COORDS_DIRT,
+            BlockData::STONE => TEX_COORDS_STONE,
+            BlockData::WOOD => TEX_COORDS_WOOD,
+            BlockData::LEAVES => TEX_COORDS_LEAVES,
+            // Not implemented yet!
+            _ => TEX_COORDS_ERROR,
+        }
     }
-}
-
 }
