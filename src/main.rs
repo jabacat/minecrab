@@ -26,7 +26,7 @@ fn tick(world: &mut World, player: &mut Player, rl: &mut RaylibHandle) {
 fn main() {
     let (mut rl, thread) = raylib::init()
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
-        .title("Hello, world!")
+        .title("Minecrab")
         .vsync()
         .highdpi()
         .build();
@@ -38,11 +38,13 @@ fn main() {
 
     let mut next_tick_in = 0_f32; // time until we run update_camera()
 
-    let texture: ffi::Texture = unsafe {
-        let mut t = rl.load_texture(&thread, "assets/full-textures.png").unwrap();
-        t.gen_texture_mipmaps();
-        t.unwrap()
-    };
+    let mut t = rl
+        .load_texture(&thread, "assets/full-textures.png")
+        .expect("Should load 'assets/full-textures.png'.");
+
+    t.gen_texture_mipmaps();
+
+    let texture: ffi::Texture = unsafe { t.unwrap() };
 
     let mut material = rl.load_material_default(&thread);
     let maps = material.maps_mut();
