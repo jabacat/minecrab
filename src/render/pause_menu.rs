@@ -15,8 +15,7 @@ impl ButtonType {
             ButtonType::QUIT => "Quit",
             ButtonType::VIDEO(video_button_type) => match video_button_type {
                 None => "Video Settings",
-                Some(VideoButtonType::VSYNC) => "Toggle Vsync",
-                Some(VideoButtonType::FULLSCREEN) => "Toggle Fullscreen",
+                Some(vbt) => vbt.get_text(),
             },
         }
     }
@@ -26,6 +25,15 @@ impl ButtonType {
 enum VideoButtonType {
     VSYNC,
     FULLSCREEN,
+}
+
+impl VideoButtonType {
+    fn get_text(&self) -> &str {
+        match self {
+            VideoButtonType::VSYNC => "Toggle Vertical Sync",
+            VideoButtonType::FULLSCREEN => "Toggle Fullscreen",
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
