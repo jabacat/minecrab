@@ -13,7 +13,7 @@ mod keys {
     pub const SPEED_INC: KeyboardKey = KEY_RIGHT_BRACKET;
 }
 
-const DEFAULT_SPEED: f32 = 0.01;
+const DEFAULT_SPEED: f32 = 0.2;
 const FRICTION: f32 = 0.15;
 const MOUSE_SENS: f32 = 0.005;
 
@@ -28,7 +28,7 @@ pub struct Player {
 
 impl Player {
     pub fn new() -> Player {
-        let pos = Vector3::new(3.0, 3.0, 3.0);
+        let pos = Vector3::new(3.0, 80., 3.0);
         let view_azim: f32 = -2.3;
         let view_elev: f32 = -0.8;
 
