@@ -172,7 +172,7 @@ impl PauseMenu {
             _ => &[],
         };
 
-        let total_button_width = 640;
+        let total_button_width = screen_width / 2;
         let button_height = 48;
 
         let button_margin_x = 36;

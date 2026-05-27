@@ -25,7 +25,7 @@ fn main() {
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("Minecrab")
         .vsync()
-        .highdpi()
+        // .highdpi()   // disabled since switching to SDL
         .build();
 
     // Disable exit on esc (default raylib behavior)
