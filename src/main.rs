@@ -29,11 +29,6 @@ fn main() {
 
     let mut player = Player::new();
 
-    let mut first_click = false;
-    let mut debug_display = false; // toggle
-
-    let mut update_camera_in = 0_f32; // time until we run update_camera()
-
     let mut t = rl
         .load_texture(&thread, "assets/full-textures.png")
         .expect("Should load 'assets/full-textures.png'.");
@@ -50,7 +45,12 @@ fn main() {
     let mut world_renderer: WorldRenderer = WorldRenderer::new(material);
 
     let mut frame: i32 = 0;
-    
+
+    let mut first_click = false;
+    let mut debug_display = false; // toggle
+
+    let mut update_camera_in = 0_f32; // time until we run update_camera()
+
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
         // doesn't fly away when the cursor enters the window at first
