@@ -4,6 +4,7 @@ use raylib::prelude::*;
 #[derive(Clone, Copy)]
 enum Buttons {
     BTG,
+    QUIT,
 }
 
 #[derive(Clone, Copy)]
@@ -31,7 +32,7 @@ impl PauseMenu {
         }
     }
 
-    pub fn update(&mut self, rl: &mut RaylibHandle) {
+    pub fn update(&mut self, rl: &mut RaylibHandle) -> bool {
         if matches!(rl.get_key_pressed(), Some(KeyboardKey::KEY_ESCAPE)) {
             self.paused ^= true;
 
@@ -60,8 +61,12 @@ impl PauseMenu {
                             // FIXME: unnecessary?
                             self.buttons.clear();
                             rl.disable_cursor();
-                            return;
+                            return false;
                         }
+                        Buttons::QUIT => {
+                            return true;
+                        }
+                        _ => (),
                     }
                 }
             }
@@ -76,6 +81,8 @@ impl PauseMenu {
             })
             .map(|b| b.button)
             .next();
+
+        false
     }
 
     pub fn render(&mut self, d: &mut RaylibDrawHandle) {
@@ -95,42 +102,77 @@ impl PauseMenu {
         let button_color_inactive = Color::new(0, 0, 0, 240);
         let button_color_active = Color::new(64, 128, 192, 240);
 
-        let button_width = 640;
-        let button_height = 48;
-        let button_x = (screen_width - button_width) / 2;
-        let button_y = (screen_height - button_height) / 2;
+        let button_margin_y = 12;
+
+        let font_size = 16;
+
+        let btg_width = 640;
+        let btg_height = 48;
+        let btg_x = (screen_width - btg_width) / 2;
+        let btg_y = (screen_height - btg_height) / 2 - btg_height / 2 - button_margin_y;
 
         self.buttons.push(Button {
-            x: button_x,
-            y: button_y,
-            width: button_width,
-            height: button_height,
+            x: btg_x,
+            y: btg_y,
+            width: btg_width,
+            height: btg_height,
             button: Buttons::BTG,
         });
 
         d.draw_rectangle(
-            button_x,
-            button_y,
-            button_width,
-            button_height,
+            btg_x,
+            btg_y,
+            btg_width,
+            btg_height,
             if matches!(self.hover, Some(Buttons::BTG)) {
                 button_color_active
             } else {
                 button_color_inactive
             },
         );
-        d.draw_rectangle_lines(
-            button_x,
-            button_y,
-            button_width,
-            button_height,
+        d.draw_rectangle_lines(btg_x, btg_y, btg_width, btg_height, Color::WHITE);
+
+        let btg_text_width = d.measure_text("Back to Game", font_size);
+        let btg_text_x = (btg_width - btg_text_width) / 2 + btg_x;
+        let btg_text_y = (btg_height - font_size) / 2 + btg_y;
+        d.draw_text(
+            "Back to Game",
+            btg_text_x,
+            btg_text_y,
+            font_size,
             Color::WHITE,
         );
 
+        let quit_width = 640;
+        let quit_height = 48;
+        let quit_x = (screen_width - quit_width) / 2;
+        let quit_y = (screen_height - quit_height) / 2 + quit_height / 2 + button_margin_y;
+
+        self.buttons.push(Button {
+            x: quit_x,
+            y: quit_y,
+            width: quit_width,
+            height: quit_height,
+            button: Buttons::QUIT,
+        });
+
+        d.draw_rectangle(
+            quit_x,
+            quit_y,
+            quit_width,
+            quit_height,
+            if matches!(self.hover, Some(Buttons::QUIT)) {
+                button_color_active
+            } else {
+                button_color_inactive
+            },
+        );
+        d.draw_rectangle_lines(quit_x, quit_y, quit_width, quit_height, Color::WHITE);
+
         let font_size = 16;
-        let text_width = d.measure_text("Back to Game", font_size);
-        let text_x = (screen_width - text_width) / 2;
-        let text_y = (screen_height - font_size) / 2;
-        d.draw_text("Back to Game", text_x, text_y, font_size, Color::WHITE);
+        let quit_text_width = d.measure_text("Quit", font_size);
+        let quit_text_x = (quit_width - quit_text_width) / 2 + quit_x;
+        let quit_text_y = (quit_height - font_size) / 2 + quit_y;
+        d.draw_text("Quit", quit_text_x, quit_text_y, font_size, Color::WHITE);
     }
 }

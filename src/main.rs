@@ -50,13 +50,15 @@ fn main() {
 
     let mut frame: i32 = 0;
 
+    let mut window_should_close = false;
     let mut pause_menu = PauseMenu::new();
     let mut debug_display = false; // toggle
 
     let mut update_camera_in = 0_f32; // time until we run update_camera()
 
-    while !rl.window_should_close() {
-        pause_menu.update(&mut rl);
+    while !window_should_close {
+        window_should_close |= rl.window_should_close();
+        window_should_close |= pause_menu.update(&mut rl);
 
         if !pause_menu.paused {
             // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
