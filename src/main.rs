@@ -91,31 +91,70 @@ fn main() {
         // Remove block
         if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) && first_click {
             let p = player.camera.position;
-            let mut dir = player.camera.target - player.camera.position;
 
+            let mut dir = player.camera.target - player.camera.position;
             dir.normalize();
+
             let hit = voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.));
 
             match hit {
                 Some(h) => {
-                    // Remove h block
                     world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
 
                     let (cx, cy, cz) = World::get_chunk_coords_of_block(h.x, h.y, h.z);
-
                     let mesh = build_geometry_chunk(&mut world, cx, cy, cz);
 
                     world_renderer.add_mesh(cx, cy, cz, mesh);
-                    println!("{:?}", h);
                 },
                 None => { /* Cannot remove block */ }
             }
         }
 
+        // Add stone block
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && first_click {
+            let p = player.camera.position;
+
+            let mut dir = player.camera.target - player.camera.position;
+            dir.normalize();
+
+            let hit = voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.));
+
+            match hit {
+                Some(h) => {
+                    world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::STONE);
+
+                    let (cx, cy, cz) = World::get_chunk_coords_of_block(h.x, h.y, h.z);
+                    let mesh = build_geometry_chunk(&mut world, cx, cy, cz);
+
+                    world_renderer.add_mesh(cx, cy, cz, mesh);
+                },
+                None => { /* Cannot add block */ }
+            }
+        }
+
+
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
             world_renderer.render(&mut d, player.camera);
+
+            let w = d.get_screen_width();
+            let h = d.get_screen_height();
+
+            // Crosshair
+            d.draw_line_ex(
+                rvec2(w / 2 - 10, h / 2),
+                rvec2(w / 2 + 10, h / 2),
+                3.0,
+                Color::WHITESMOKE,
+            );
+
+            d.draw_line_ex(
+                rvec2(w / 2, h / 2 - 10),
+                rvec2(w / 2, h / 2 + 10),
+                3.0,
+                Color::WHITESMOKE,
+            );
 
             if !first_click {
                 d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
