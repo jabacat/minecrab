@@ -1,6 +1,7 @@
 use super::generation::World;
 use super::blocks::BlockData;
 
+#[derive(Debug)]
 pub struct VoxelRaycastHit {
     //coordinates of the voxel that was hit.
     pub x: i64, pub y: i64, pub z: i64,

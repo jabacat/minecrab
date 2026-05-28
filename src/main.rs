@@ -8,11 +8,11 @@ mod world;
 
 use player::{Player, update_camera_angle, update_camera_position};
 use world::generation::World;
-use world::collision::voxel_raycast;
+use world::collision::{voxel_raycast, VoxelRaycastHit};
 
 use crate::render::mesh_tools;
 use crate::render::skybox::{create_skybox_mesh, day_amount};
-use crate::render::worldmesh::WorldRenderer;
+use crate::render::worldmesh::{WorldRenderer, build_geometry_chunk};
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -30,6 +30,24 @@ fn tick(
     //terrain generation should be in here too, and a lot of other stuff.
     //probably need some kind of (dreaded) GameState object to keep the
     //parameter list from being ridiculous.
+}
+
+fn hit_voxel_from_player(player: &mut Player, world: &mut World) -> Option<VoxelRaycastHit> {
+    // Return a hit from where the player is looking
+    let p = player.camera.position;
+
+    let mut dir = player.camera.target - player.camera.position;
+    dir.normalize();
+
+    voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.))
+}
+
+fn update_mesh_on_hit(world: &mut World, h: VoxelRaycastHit, world_renderer: &mut WorldRenderer) {
+    // Update a mesh for a given voxel in hit
+    let (cx, cy, cz) = World::get_chunk_coords_of_block(h.x, h.y, h.z);
+    let mesh = build_geometry_chunk(world, cx, cy, cz);
+
+    world_renderer.add_mesh(cx, cy, cz, mesh);
 }
 
 fn main() {
@@ -110,6 +128,30 @@ fn main() {
             if debug_display { open_sound.play() } else { close_sound.play() };
         }
 
+        // Remove block
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && first_click {
+            let hit = hit_voxel_from_player(&mut player, &mut world);
+
+            if let Some(h) = hit {
+                world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
+                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+            }
+        }
+
+        // Add stone block
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) && first_click {
+            let hit = hit_voxel_from_player(&mut player, &mut world);
+
+            if let Some(h) = hit {
+                world.set_block_data(
+                    h.x + h.normal_x as i64,
+                    h.y + h.normal_y as i64,
+                    h.z + h.normal_z as i64,
+                    world::blocks::BlockData::STONE
+                );
+                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+            }
+        }
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
@@ -133,6 +175,24 @@ fn main() {
             });
 
             world_renderer.render(&mut d, player.camera);
+
+            let w = d.get_screen_width();
+            let h = d.get_screen_height();
+
+            // Crosshair
+            d.draw_line_ex(
+                rvec2(w / 2 - 10, h / 2),
+                rvec2(w / 2 + 10, h / 2),
+                3.0,
+                Color::WHITESMOKE,
+            );
+
+            d.draw_line_ex(
+                rvec2(w / 2, h / 2 - 10),
+                rvec2(w / 2, h / 2 + 10),
+                3.0,
+                Color::WHITESMOKE,
+            );
 
             if !first_click {
                 d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
