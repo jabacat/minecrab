@@ -1,0 +1,135 @@
+use raylib::prelude::*;
+
+const MARGIN_X: i32 = 36;
+const MARGIN_Y: i32 = 12;
+
+macro_rules! col {
+    ( $e:expr ) => {
+        Box::new(ColLayout::new(Box::new($e)))
+    };
+}
+
+macro_rules! row {
+    ( $e:expr ) => {
+        Box::new(RowLayout::new(Box::new($e)))
+    };
+}
+
+pub trait GuiElement<T> {
+    // FIXME: we never use this method (width is calculated when needed, e.g. RowLayout::render)
+    fn get_total_width(&self) -> i32;
+    fn get_total_height(&self) -> i32;
+    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32);
+    fn check_mouse(
+        &mut self,
+        rl: &mut RaylibHandle,
+        mx: i32,
+        my: i32,
+        lmb_pressed: bool,
+    ) -> Option<T>;
+}
+
+pub struct ColLayout<T> {
+    elements: Box<[Box<dyn GuiElement<T>>]>,
+}
+
+impl<T> ColLayout<T> {
+    pub fn new(elements: Box<[Box<dyn GuiElement<T>>]>) -> Self {
+        Self { elements }
+    }
+}
+
+impl<T> GuiElement<T> for ColLayout<T> {
+    fn get_total_width(&self) -> i32 {
+        todo!()
+    }
+
+    fn get_total_height(&self) -> i32 {
+        self.elements
+            .iter()
+            .map(|e| e.get_total_height())
+            .sum::<i32>()
+            + (self.elements.len() as i32 - 1) * MARGIN_Y
+    }
+
+    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
+        let mut current_y = y;
+
+        // TODO: remove enumerate in refactor
+        for (i, element) in self.elements.iter_mut().enumerate() {
+            element.render(d, x, current_y, width);
+
+            // bump current y position
+            let element_height = element.get_total_height();
+            current_y += element_height + MARGIN_Y;
+        }
+    }
+
+    fn check_mouse(
+        &mut self,
+        rl: &mut RaylibHandle,
+        mx: i32,
+        my: i32,
+        lmb_pressed: bool,
+    ) -> Option<T> {
+        // we don't need to do any mouse checks in this struct, but we need to propagate
+        self.elements
+            .iter_mut()
+            .map(|e| e.check_mouse(rl, mx, my, lmb_pressed))
+            .filter(|o| o.is_some())
+            .last()
+            .flatten()
+    }
+}
+
+pub struct RowLayout<T> {
+    elements: Box<[Box<dyn GuiElement<T>>]>,
+}
+
+impl<T> RowLayout<T> {
+    pub fn new(elements: Box<[Box<dyn GuiElement<T>>]>) -> Self {
+        Self { elements }
+    }
+}
+
+impl<T> GuiElement<T> for RowLayout<T> {
+    fn get_total_width(&self) -> i32 {
+        todo!()
+    }
+
+    fn get_total_height(&self) -> i32 {
+        self.elements
+            .iter()
+            .map(|e| e.get_total_height())
+            .max()
+            .unwrap_or(0)
+    }
+
+    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
+        // XXX: we calculate element width here
+        let num_elements = self.elements.len() as i32;
+        let element_width = (width - MARGIN_X * (num_elements - 1)) / num_elements;
+
+        for (i, element) in self.elements.iter_mut().enumerate() {
+            let element_x = x + i as i32 * (element_width + MARGIN_X);
+
+            element.render(d, element_x, y, element_width);
+        }
+    }
+
+    fn check_mouse(
+        &mut self,
+        rl: &mut RaylibHandle,
+        mx: i32,
+        my: i32,
+        lmb_pressed: bool,
+    ) -> Option<T> {
+        // we don't need to do any mouse checks in this struct, but we need to propagate
+        self.elements
+            .iter_mut()
+            .map(|e| e.check_mouse(rl, mx, my, lmb_pressed))
+            .filter(|o| o.is_some())
+            .last()
+            .flatten()
+    }
+}

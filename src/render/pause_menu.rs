@@ -1,7 +1,9 @@
 use raylib::prelude::*;
 
-const MARGIN_X: i32 = 36;
-const MARGIN_Y: i32 = 12;
+// XXX: Consider importing *?
+use crate::render::gui::ColLayout;
+use crate::render::gui::GuiElement;
+use crate::render::gui::RowLayout;
 
 const FONT_SIZE: i32 = 16;
 
@@ -14,9 +16,8 @@ const BUTTON_BG_HOVER: Color = Color::new(64, 128, 192, 240);
 
 const BUTTON_BORDER_COLOR: Color = Color::WHITE;
 
-// useless boilerplate that we could probably do without tbh
 #[derive(Clone, Copy, PartialEq)]
-enum ButtonType {
+pub enum ButtonType {
     BTG,
     QUIT,
     VIDEO(Option<VideoButtonType>),
@@ -47,7 +48,7 @@ impl ButtonType {
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum VideoButtonType {
+pub enum VideoButtonType {
     BACK,
     VSYNC,
     FULLSCREEN,
@@ -82,7 +83,7 @@ impl VideoButtonType {
 }
 
 #[derive(Clone, Copy)]
-struct Button {
+pub struct Button {
     x: i32,
     y: i32,
     width: i32,
@@ -105,29 +106,7 @@ impl Button {
     }
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum PauseMenuState {
-    Running,
-    Paused,
-    Video,
-    ShouldQuit,
-}
-
-trait GuiElement {
-    // FIXME: we never use this method (width is calculated when needed, e.g. RowLayout::render)
-    fn get_total_width(&self) -> i32;
-    fn get_total_height(&self) -> i32;
-    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32);
-    fn check_mouse(
-        &mut self,
-        rl: &mut RaylibHandle,
-        mx: i32,
-        my: i32,
-        lmb_pressed: bool,
-    ) -> Option<PauseMenuState>;
-}
-
-impl GuiElement for Button {
+impl GuiElement<PauseMenuState> for Button {
     fn get_total_width(&self) -> i32 {
         todo!()
     }
@@ -182,102 +161,17 @@ impl GuiElement for Button {
     }
 }
 
-struct ColLayout {
-    elements: Box<[Box<dyn GuiElement>]>,
-}
-
-impl GuiElement for ColLayout {
-    fn get_total_width(&self) -> i32 {
-        todo!()
-    }
-
-    fn get_total_height(&self) -> i32 {
-        self.elements
-            .iter()
-            .map(|e| e.get_total_height())
-            .sum::<i32>()
-            + (self.elements.len() as i32 - 1) * MARGIN_Y
-    }
-
-    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
-        let mut current_y = y;
-
-        // TODO: remove enumerate in refactor
-        for (i, element) in self.elements.iter_mut().enumerate() {
-            element.render(d, x, current_y, width);
-
-            // bump current y position
-            let element_height = element.get_total_height();
-            current_y += element_height + MARGIN_Y;
-        }
-    }
-
-    fn check_mouse(
-        &mut self,
-        rl: &mut RaylibHandle,
-        mx: i32,
-        my: i32,
-        lmb_pressed: bool,
-    ) -> Option<PauseMenuState> {
-        // we don't need to do any mouse checks in this struct, but we need to propagate
-        self.elements
-            .iter_mut()
-            .map(|e| e.check_mouse(rl, mx, my, lmb_pressed))
-            .filter(|o| o.is_some())
-            .last()
-            .flatten()
-    }
-}
-
-struct RowLayout {
-    elements: Box<[Box<dyn GuiElement>]>,
-}
-
-impl GuiElement for RowLayout {
-    fn get_total_width(&self) -> i32 {
-        todo!()
-    }
-
-    fn get_total_height(&self) -> i32 {
-        self.elements
-            .iter()
-            .map(|e| e.get_total_height())
-            .max()
-            .unwrap_or(0)
-    }
-
-    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
-        // XXX: we calculate element width here
-        let num_elements = self.elements.len() as i32;
-        let element_width = (width - MARGIN_X * (num_elements - 1)) / num_elements;
-
-        for (i, element) in self.elements.iter_mut().enumerate() {
-            let element_x = x + i as i32 * (element_width + MARGIN_X);
-
-            element.render(d, element_x, y, element_width);
-        }
-    }
-
-    fn check_mouse(
-        &mut self,
-        rl: &mut RaylibHandle,
-        mx: i32,
-        my: i32,
-        lmb_pressed: bool,
-    ) -> Option<PauseMenuState> {
-        // we don't need to do any mouse checks in this struct, but we need to propagate
-        self.elements
-            .iter_mut()
-            .map(|e| e.check_mouse(rl, mx, my, lmb_pressed))
-            .filter(|o| o.is_some())
-            .last()
-            .flatten()
-    }
+#[derive(Clone, Copy, PartialEq)]
+enum PauseMenuState {
+    Running,
+    Paused,
+    Video,
+    ShouldQuit,
 }
 
 pub struct PauseMenu {
     state: PauseMenuState,
-    root_element: Option<Box<dyn GuiElement>>,
+    root_element: Option<Box<dyn GuiElement<PauseMenuState>>>,
 }
 
 impl PauseMenu {
@@ -287,13 +181,11 @@ impl PauseMenu {
         // and defer everything about root_element to set_state()
         PauseMenu {
             state: PauseMenuState::Paused,
-            root_element: Some(Box::new(ColLayout {
-                elements: Box::new([
-                    Box::new(Button::new(ButtonType::BTG)),
-                    Box::new(Button::new(ButtonType::VIDEO(None))),
-                    Box::new(Button::new(ButtonType::QUIT)),
-                ]),
-            })),
+            root_element: Some(col!([
+                Box::new(Button::new(ButtonType::BTG)),
+                Box::new(Button::new(ButtonType::VIDEO(None))),
+                Box::new(Button::new(ButtonType::QUIT)),
+            ])),
         }
 
         // Set root_element; removes another place to copy root_element by calling set_state
@@ -314,34 +206,24 @@ impl PauseMenu {
             PauseMenuState::Paused => {
                 rl.enable_cursor();
 
-                self.root_element = Some(Box::new(ColLayout {
-                    elements: Box::new([
-                        Box::new(Button::new(ButtonType::BTG)),
-                        Box::new(Button::new(ButtonType::VIDEO(None))),
-                        Box::new(Button::new(ButtonType::QUIT)),
-                    ]),
-                }));
+                self.root_element = Some(col!([
+                    Box::new(Button::new(ButtonType::BTG)),
+                    Box::new(Button::new(ButtonType::VIDEO(None))),
+                    Box::new(Button::new(ButtonType::QUIT)),
+                ]));
             }
             PauseMenuState::Video => {
-                self.root_element = Some(Box::new(ColLayout {
-                    elements: Box::new([
-                        Box::new(RowLayout {
-                            elements: Box::new([
-                                Box::new(ColLayout {
-                                    elements: Box::new([Box::new(Button::new(ButtonType::VIDEO(
-                                        Some(VideoButtonType::VSYNC),
-                                    )))]),
-                                }),
-                                Box::new(ColLayout {
-                                    elements: Box::new([Box::new(Button::new(ButtonType::VIDEO(
-                                        Some(VideoButtonType::FULLSCREEN),
-                                    )))]),
-                                }),
-                            ]),
-                        }),
-                        Box::new(Button::new(ButtonType::VIDEO(Some(VideoButtonType::BACK)))),
+                self.root_element = Some(col!([
+                    row!([
+                        col!([Box::new(Button::new(ButtonType::VIDEO(Some(
+                            VideoButtonType::VSYNC
+                        ),)))]),
+                        col!([Box::new(Button::new(ButtonType::VIDEO(Some(
+                            VideoButtonType::FULLSCREEN
+                        ),)))]),
                     ]),
-                }));
+                    Box::new(Button::new(ButtonType::VIDEO(Some(VideoButtonType::BACK)))),
+                ]));
             }
             PauseMenuState::ShouldQuit => {}
         }
