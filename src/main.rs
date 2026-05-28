@@ -58,7 +58,9 @@ fn main() {
 
     while !window_should_close {
         window_should_close |= rl.window_should_close();
-        window_should_close |= pause_menu.update(&mut rl);
+
+        pause_menu.update(&mut rl);
+        window_should_close |= pause_menu.should_quit();
 
         if pause_menu.is_running() {
             // rl.update_camera(&mut camera, CameraMode::CAMERA_FIRST_PERSON);
