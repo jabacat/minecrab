@@ -88,6 +88,22 @@ fn main() {
             if debug_display { open_sound.play() } else { close_sound.play() };
         }
 
+        // Remove block
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) && first_click {
+            let p = player.camera.position;
+            let mut dir = player.camera.target - player.camera.position;
+
+            dir.normalize();
+            let hit = voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.));
+
+            match hit {
+                Some(h) => {
+                    // Remove h block
+                    println!("Trying to remove {:?}", h);
+                },
+                None => { /* Cannot remove block */ }
+            }
+        }
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
