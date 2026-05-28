@@ -1,34 +1,29 @@
 use raylib::prelude::*;
 
 // XXX: Consider importing *?
+use crate::render::gui::Button;
+use crate::render::gui::ButtonType;
 use crate::render::gui::ColLayout;
 use crate::render::gui::GuiElement;
 use crate::render::gui::RowLayout;
 
-const FONT_SIZE: i32 = 16;
-
-const BUTTON_HEIGHT: i32 = 48;
-
-const BUTTON_FG: Color = Color::WHITE;
-
-const BUTTON_BG_INACTIVE: Color = Color::new(0, 0, 0, 240);
-const BUTTON_BG_HOVER: Color = Color::new(64, 128, 192, 240);
-
-const BUTTON_BORDER_COLOR: Color = Color::WHITE;
+const PAUSE_BG: Color = Color::new(0, 0, 0, 127);
 
 #[derive(Clone, Copy, PartialEq)]
-pub enum ButtonType {
+pub enum PauseButtonType {
     BTG,
     QUIT,
     VIDEO(Option<VideoButtonType>),
 }
 
-impl ButtonType {
+impl ButtonType for PauseButtonType {
+    type T = PauseMenuState;
+
     fn get_text(&self) -> &str {
         match self {
-            ButtonType::BTG => "Back to Game",
-            ButtonType::QUIT => "Quit",
-            ButtonType::VIDEO(video_button_type) => match video_button_type {
+            PauseButtonType::BTG => "Back to Game",
+            PauseButtonType::QUIT => "Quit",
+            PauseButtonType::VIDEO(video_button_type) => match video_button_type {
                 None => "Video Settings",
                 Some(vbt) => vbt.get_text(),
             },
@@ -37,9 +32,9 @@ impl ButtonType {
 
     fn act(&self, rl: &mut RaylibHandle) -> Option<PauseMenuState> {
         match self {
-            ButtonType::BTG => Some(PauseMenuState::Running),
-            ButtonType::QUIT => Some(PauseMenuState::ShouldQuit),
-            ButtonType::VIDEO(video_button_type) => match video_button_type {
+            PauseButtonType::BTG => Some(PauseMenuState::Running),
+            PauseButtonType::QUIT => Some(PauseMenuState::ShouldQuit),
+            PauseButtonType::VIDEO(video_button_type) => match video_button_type {
                 None => Some(PauseMenuState::Video),
                 Some(vbt) => vbt.act(rl),
             },
@@ -54,7 +49,9 @@ pub enum VideoButtonType {
     FULLSCREEN,
 }
 
-impl VideoButtonType {
+impl ButtonType for VideoButtonType {
+    type T = PauseMenuState;
+
     fn get_text(&self) -> &str {
         match self {
             VideoButtonType::BACK => "Back",
@@ -82,87 +79,8 @@ impl VideoButtonType {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct Button {
-    x: i32,
-    y: i32,
-    width: i32,
-    height: i32,
-    button: ButtonType,
-
-    hover: bool,
-}
-
-impl Button {
-    pub fn new(button: ButtonType) -> Self {
-        Button {
-            x: -1,
-            y: -1,
-            width: -1,
-            height: BUTTON_HEIGHT,
-            button,
-            hover: false,
-        }
-    }
-}
-
-impl GuiElement<PauseMenuState> for Button {
-    fn get_total_width(&self) -> i32 {
-        todo!()
-    }
-
-    fn get_total_height(&self) -> i32 {
-        // FIXME: maybe remove if we only use the constant BUTTON_HEIGHT?
-        // although it's likely that this will be useful in the future
-        // so actually probably DON't remove this property
-        self.height
-    }
-
-    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
-        // store current rendering params for mouse inputs
-        self.x = x;
-        self.y = y;
-        self.width = width;
-        self.height = BUTTON_HEIGHT;
-
-        d.draw_rectangle(
-            x,
-            y,
-            width,
-            BUTTON_HEIGHT,
-            if self.hover {
-                BUTTON_BG_HOVER
-            } else {
-                BUTTON_BG_INACTIVE
-            },
-        );
-        d.draw_rectangle_lines(x, y, width, BUTTON_HEIGHT, BUTTON_BORDER_COLOR);
-
-        let text_width = d.measure_text(self.button.get_text(), FONT_SIZE);
-        let text_x = (width - text_width) / 2 + x;
-        let text_y = (BUTTON_HEIGHT - FONT_SIZE) / 2 + y;
-        d.draw_text(self.button.get_text(), text_x, text_y, FONT_SIZE, BUTTON_FG);
-    }
-
-    fn check_mouse(
-        &mut self,
-        rl: &mut RaylibHandle,
-        mx: i32,
-        my: i32,
-        lmb_pressed: bool,
-    ) -> Option<PauseMenuState> {
-        self.hover = (self.x..(self.x + self.width)).contains(&(mx as i32))
-            && (self.y..(self.y + self.height)).contains(&(my as i32));
-        if self.hover && lmb_pressed {
-            self.button.act(rl)
-        } else {
-            None
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq)]
-enum PauseMenuState {
+pub enum PauseMenuState {
     Running,
     Paused,
     Video,
@@ -182,9 +100,9 @@ impl PauseMenu {
         PauseMenu {
             state: PauseMenuState::Paused,
             root_element: Some(col!([
-                Box::new(Button::new(ButtonType::BTG)),
-                Box::new(Button::new(ButtonType::VIDEO(None))),
-                Box::new(Button::new(ButtonType::QUIT)),
+                button!(PauseButtonType::BTG),
+                button!(PauseButtonType::VIDEO(None)),
+                button!(PauseButtonType::QUIT),
             ])),
         }
 
@@ -207,22 +125,22 @@ impl PauseMenu {
                 rl.enable_cursor();
 
                 self.root_element = Some(col!([
-                    Box::new(Button::new(ButtonType::BTG)),
-                    Box::new(Button::new(ButtonType::VIDEO(None))),
-                    Box::new(Button::new(ButtonType::QUIT)),
+                    button!(PauseButtonType::BTG),
+                    button!(PauseButtonType::VIDEO(None)),
+                    button!(PauseButtonType::QUIT),
                 ]));
             }
             PauseMenuState::Video => {
                 self.root_element = Some(col!([
                     row!([
-                        col!([Box::new(Button::new(ButtonType::VIDEO(Some(
+                        col!([button!(PauseButtonType::VIDEO(Some(
                             VideoButtonType::VSYNC
-                        ),)))]),
-                        col!([Box::new(Button::new(ButtonType::VIDEO(Some(
+                        ),))]),
+                        col!([button!(PauseButtonType::VIDEO(Some(
                             VideoButtonType::FULLSCREEN
-                        ),)))]),
+                        ),))]),
                     ]),
-                    Box::new(Button::new(ButtonType::VIDEO(Some(VideoButtonType::BACK)))),
+                    button!(PauseButtonType::VIDEO(Some(VideoButtonType::BACK))),
                 ]));
             }
             PauseMenuState::ShouldQuit => {}
@@ -272,7 +190,7 @@ impl PauseMenu {
         let screen_height = d.get_screen_height();
 
         // Tint screen
-        d.draw_rectangle(0, 0, screen_width, screen_height, Color::new(0, 0, 0, 127));
+        d.draw_rectangle(0, 0, screen_width, screen_height, PAUSE_BG);
 
         let total_width = screen_width / 2;
         let start_x = (screen_width - total_width) / 2;
