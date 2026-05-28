@@ -11,8 +11,8 @@ uniform sampler2D tex;
 void main() {
     fragColor = texture(tex, fragTexCoord);
     float up = dot(fragVertexNormal, vec3(0.0, 1.0, 0.0));
-    float bottom_face_bright = 0.7;
-    float side_face_bright = 0.85;
+    float bottom_face_bright = 0.6;
+    float side_face_bright = 0.75;
     // Bottom face: make darker
     if (up < -0.1) {
         fragColor *= vec4(bottom_face_bright, bottom_face_bright, bottom_face_bright, 1.0);
