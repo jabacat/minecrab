@@ -90,6 +90,7 @@ pub enum PauseMenuState {
 pub struct PauseMenu {
     state: PauseMenuState,
     root_element: Option<Box<dyn GuiElement<PauseMenuState>>>,
+    last_mouse_pos: Vector2,
 }
 
 impl PauseMenu {
@@ -104,6 +105,7 @@ impl PauseMenu {
                 button!(PauseButtonType::VIDEO(None)),
                 button!(PauseButtonType::QUIT),
             ])),
+            last_mouse_pos: Vector2 { x: 0., y: 0. },
         }
 
         // Set root_element; removes another place to copy root_element by calling set_state
@@ -119,10 +121,20 @@ impl PauseMenu {
                 // FIXME: unnecessary?
                 self.root_element = None;
 
+                // Save mouse position
+                self.last_mouse_pos = rl.get_mouse_position();
+
                 rl.disable_cursor();
+
+                // XXX: For some reason, setting the cursor to (0,0) seems to fix
+                // the camera explosion
+                rl.set_mouse_position((0., 0.));
             }
             PauseMenuState::Paused => {
+                dbg!(rl.get_mouse_position());
                 rl.enable_cursor();
+                // Restore mouse position
+                rl.set_mouse_position(self.last_mouse_pos);
 
                 self.root_element = Some(col!([
                     button!(PauseButtonType::BTG),
