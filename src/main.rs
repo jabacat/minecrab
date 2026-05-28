@@ -1,3 +1,5 @@
+use std::fs;
+
 use raylib::prelude::*;
 
 mod player;
@@ -5,10 +7,11 @@ mod render;
 mod world;
 
 use player::{Player, update_camera_angle, update_camera_position};
+use serde::Serialize;
 use world::generation::World;
 use world::collision::voxel_raycast;
 
-use crate::render::mesh_tools;
+use crate::render::{mesh_tools, worldmesh};
 use crate::render::worldmesh::WorldRenderer;
 
 const WINDOW_WIDTH: i32 = 1280;
@@ -86,6 +89,31 @@ fn main() {
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
             debug_display = !debug_display;
             if debug_display { open_sound.play() } else { close_sound.play() };
+        }
+
+        // FIXME: implement saving menu (waiting on #58)
+        // Q for save
+        if rl.is_key_pressed(KeyboardKey::KEY_Q) {
+            let buf = rmp_serde::to_vec(&world).unwrap();
+            fs::write("world.bin", buf);
+            // let mut s = flexbuffers::FlexbufferSerializer::new();
+            // world.serialize(&mut s).unwrap();
+            // fs::write("world.bin", s.view());
+            // let serialized = serde_json::to_string(&world).unwrap();
+            // fs::write("world.json", serialized);
+        }
+
+        // L for load
+        if rl.is_key_pressed(KeyboardKey::KEY_L) {
+            // FIXME: implement proper error handling
+            let bytes = fs::read("world.bin").unwrap();
+            world = rmp_serde::from_slice(&bytes).expect("deserialize failed");
+
+            // reset world renderer
+            world.mesh_all_chunks(&mut world_renderer);            
+            // world = flexbuffers::from_slice::<World>(&bytes).expect("failed to deserialize");
+            // let serialized = fs::read("world.json").unwrap();
+            // world = serde_json::from_slice::<World>(&serialized).expect("failed to deserialize world");
         }
 
 

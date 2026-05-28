@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 // All block types we will have.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub enum BlockData {
     AIR,
     GRASS,
