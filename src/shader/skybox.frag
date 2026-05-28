@@ -8,6 +8,9 @@ out vec4 fragColor;
 
 uniform sampler2D tex;
 
+const vec4 dayColor = vec4(0.5, 0.8, 1.0, 1.0);
+const vec4 nightColor = vec4(0.1, 0.1, 0.1, 1.0);
+
 void main() {
-    fragColor = vec4(0.5, 0.8, 1.0, 1.0);
+    fragColor = nightColor;
 }
