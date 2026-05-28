@@ -1,5 +1,5 @@
 // All block types we will have.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum BlockData {
     AIR,
     GRASS,
