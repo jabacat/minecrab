@@ -70,6 +70,10 @@ fn main() {
                 update_camera_position(&mut player, &mut rl);
                 update_camera_in += TICK_LENGTH;
             }
+        } else {
+            // Technically, we only need to set this once, but this is simpler
+            player.no_delta = true;
+            player.discard_delta = None;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) { // toggle debug menu
             debug_display = !debug_display;

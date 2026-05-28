@@ -24,6 +24,9 @@ pub struct Player {
     pub momentum: Vector3,
     pub view_azim: f32,
     pub view_elev: f32,
+
+    pub no_delta: bool,
+    pub discard_delta: Option<Vector2>,
 }
 
 impl Player {
@@ -47,7 +50,9 @@ impl Player {
             speed: DEFAULT_SPEED,
             momentum: Vector3{x: 0.0, y: 0.0, z: 0.0},
             view_azim,
-            view_elev
+            view_elev,
+            no_delta: true,
+            discard_delta: None,
         };
     }
 }
@@ -62,10 +67,33 @@ fn movement_smooth(from: f32, to: f32) -> f32 {
 }
 
 pub fn update_camera_angle(player: &mut Player, rl: &mut RaylibHandle) {
-    let mouse_delta = rl.get_mouse_delta();
+    // FIXME: SUPER HACKY WORKAROUND
+    let Vector2 { x: dx, y: dy } = if !player.no_delta {
+        // We are updating the camera angle as usual
+        rl.get_mouse_delta()
+    } else {
+        // We are not updating the camera angle, e.g. just disabled cursor
+        // SDL will return (0, 0) followed by enormous values for the mouse delta
+        // right after disabling the cursor, so we need to account for this
+        // It seems to return the same enormous values, so we save them and wait
+        // for a new mouse delta value to be returned
+        if let Some(dd) = player.discard_delta {
+            // If we already have a discard value saved
+            player.no_delta = dd == rl.get_mouse_delta();
+        } else {
+            // Save a discard value if it is not equal to (0, 0)
+            let md = rl.get_mouse_delta();
+            player.discard_delta = if md.x == 0. && md.y == 0. {
+                None
+            } else {
+                Some(md)
+            };
+        }
+        Vector2 { x: 0., y: 0. }
+    };
 
-    player.view_azim += mouse_delta.x * MOUSE_SENS;
-    player.view_elev -= mouse_delta.y * MOUSE_SENS;
+    player.view_azim += dx * MOUSE_SENS;
+    player.view_elev -= dy * MOUSE_SENS;
 
     // Avoid vertical singularities
     player.view_elev = player.view_elev.clamp(-1.57, 1.57);
