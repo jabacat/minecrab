@@ -18,8 +18,9 @@ This project is for us to practice our development skills and build something co
 
 ### macOS
 
-Assuming you have installed GLFW via Homebrew, run `source scripts/macos-setup.sh`
-one per command linesession to get the correct Rust compilation flags.
+This project requires SDL3 to build. Assuming you have installed SDL3 via
+Homebrew, run `source scripts/macos-setup.sh` one per command linesession to
+get the correct Rust compilation flags.
 
 ## Assets
 

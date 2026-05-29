@@ -11,39 +11,39 @@ env:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
+          cache: false
+          rustflags: ""
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Dependencies
-        run: brew install glfw
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl2-dev
       
       - name: Build
-        run: source ./scripts/macos-setup.sh && cargo build --verbose
+        run: cargo build --verbose
     
   test:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
-          profile: minimal
-          toolchain: stable
+          cache: false
+          rustflags: ""
 
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
 
       - name: Dependencies
-        run: brew install glfw
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl2-dev
       
       - name: Test
-        run: source ./scripts/macos-setup.sh && cargo test --verbose
+        run: cargo test --verbose

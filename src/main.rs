@@ -11,6 +11,7 @@ use world::generation::World;
 use world::collision::{voxel_raycast, VoxelRaycastHit};
 
 use crate::render::mesh_tools;
+use crate::render::pause_menu::PauseMenu;
 use crate::render::skybox::{create_skybox_mesh, day_amount};
 use crate::render::worldmesh::{WorldRenderer, build_geometry_chunk};
 
@@ -55,13 +56,13 @@ fn main() {
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("Minecrab")
         .vsync()
-        .highdpi()
+        .highdpi()   // disabled since switching to SDL
         .build();
 
-    let mut player = Player::new();
+    // Disable exit on esc (default raylib behavior)
+    rl.set_exit_key(None);
 
-    let mut first_click = false;
-    let mut debug_display = false; // toggle
+    let mut player = Player::new();
 
     let mut next_tick_in = 0_f32; // time until we run update_camera()
 
@@ -101,53 +102,60 @@ fn main() {
     let mut world_renderer: WorldRenderer = WorldRenderer::new(material);
 
     let mut frame: i32 = 0;
-    
-    while !rl.window_should_close() {
-        // require a click on the window before updating camera so the camera
-        // doesn't fly away when the cursor enters the window at first
-        if !first_click {
-            if rl.is_mouse_button_down(MouseButton::MOUSE_BUTTON_LEFT) {
-                first_click = true;
-                rl.disable_cursor();
-            }
-        } else {
+
+    let mut window_should_close = false;
+    let mut pause_menu = PauseMenu::new();
+    let mut debug_display = false; // toggle
+
+    while !window_should_close {
+        window_should_close |= rl.window_should_close();
+
+        pause_menu.update(&mut rl);
+        window_should_close |= pause_menu.should_quit();
+
+        if pause_menu.is_running() {
             update_camera_angle(&mut player, &mut rl);
-        }
 
-        next_tick_in -= rl.get_frame_time();
-        while next_tick_in < 0_f32 {
-            tick(&mut world, &mut player, &mut rl);
-            next_tick_in += TICK_LENGTH;
-        }
-
-        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
-            debug_display = !debug_display;
-            if debug_display { open_sound.play() } else { close_sound.play() };
-        }
-
-        // Remove block
-        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && first_click {
-            let hit = hit_voxel_from_player(&mut player, &mut world);
-
-            if let Some(h) = hit {
-                world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+            next_tick_in -= rl.get_frame_time();
+            while next_tick_in < 0_f32 {
+                tick(&mut world, &mut player, &mut rl);
+                next_tick_in += TICK_LENGTH;
             }
-        }
-
-        // Add stone block
-        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) && first_click {
-            let hit = hit_voxel_from_player(&mut player, &mut world);
-
-            if let Some(h) = hit {
-                world.set_block_data(
-                    h.x + h.normal_x as i64,
-                    h.y + h.normal_y as i64,
-                    h.z + h.normal_z as i64,
-                    world::blocks::BlockData::STONE
-                );
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+            
+            if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) { // toggle debug menu
+                debug_display = !debug_display;
+                if debug_display { open_sound.play() } else { close_sound.play() };
             }
+            
+            // Remove block
+            if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+                let hit = hit_voxel_from_player(&mut player, &mut world);
+                
+                if let Some(h) = hit {
+                    world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
+                    update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                }
+            }
+            
+            // Add stone block
+            if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
+                let hit = hit_voxel_from_player(&mut player, &mut world);
+                
+                if let Some(h) = hit {
+                    world.set_block_data(
+                        h.x + h.normal_x as i64,
+                        h.y + h.normal_y as i64,
+                        h.z + h.normal_z as i64,
+                        world::blocks::BlockData::STONE
+                    );
+                    update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                }
+            }
+
+            if frame % FRAMES_PER_CHUNK == 0 {
+                world.generate_next_chunk(&mut world_renderer);
+            }
+            frame += 1;
         }
 
         rl.draw(&thread, |mut d| {
@@ -174,8 +182,8 @@ fn main() {
 
             world_renderer.render(&mut d, player.camera);
 
-            let w = d.get_screen_width();
-            let h = d.get_screen_height();
+            let w = d.get_render_width();
+            let h = d.get_render_height();
 
             // Crosshair
             d.draw_line_ex(
@@ -192,9 +200,6 @@ fn main() {
                 Color::WHITESMOKE,
             );
 
-            if !first_click {
-                d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
-            }
             if debug_display {
                 let mut debug_info = String::new();
                 debug_info += &format!(
@@ -227,11 +232,9 @@ fn main() {
                 );
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
-        });
 
-        if frame % FRAMES_PER_CHUNK == 0 {
-            world.generate_next_chunk(&mut world_renderer);
-        }
-        frame += 1;
+            // Render pause menu
+            pause_menu.render(&mut d);
+        });
     }
 }

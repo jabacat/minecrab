@@ -47,7 +47,7 @@ impl Player {
             speed: DEFAULT_SPEED,
             momentum: Vector3{x: 0.0, y: 0.0, z: 0.0},
             view_azim,
-            view_elev
+            view_elev,
         };
     }
 }
@@ -62,10 +62,10 @@ fn movement_smooth(from: f32, to: f32) -> f32 {
 }
 
 pub fn update_camera_angle(player: &mut Player, rl: &mut RaylibHandle) {
-    let mouse_delta = rl.get_mouse_delta();
-
-    player.view_azim += mouse_delta.x * MOUSE_SENS;
-    player.view_elev -= mouse_delta.y * MOUSE_SENS;
+    let Vector2 { x: dx, y: dy } = rl.get_mouse_delta();
+    
+    player.view_azim += dx * MOUSE_SENS;
+    player.view_elev -= dy * MOUSE_SENS;
 
     // Avoid vertical singularities
     player.view_elev = player.view_elev.clamp(-1.57, 1.57);
