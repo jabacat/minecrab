@@ -24,9 +24,6 @@ pub struct Player {
     pub momentum: Vector3,
     pub view_azim: f32,
     pub view_elev: f32,
-
-    pub no_delta: bool,
-    pub discard_delta: Option<Vector2>,
 }
 
 impl Player {
@@ -51,8 +48,6 @@ impl Player {
             momentum: Vector3{x: 0.0, y: 0.0, z: 0.0},
             view_azim,
             view_elev,
-            no_delta: true,
-            discard_delta: None,
         };
     }
 }
@@ -67,7 +62,6 @@ fn movement_smooth(from: f32, to: f32) -> f32 {
 }
 
 pub fn update_camera_angle(player: &mut Player, rl: &mut RaylibHandle) {
-    // FIXME: SUPER HACKY WORKAROUND
     let Vector2 { x: dx, y: dy } = rl.get_mouse_delta();
     
     player.view_azim += dx * MOUSE_SENS;
