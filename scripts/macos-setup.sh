@@ -2,9 +2,8 @@
 # Run this script once per command line session, and thereafter run 'cargo build'
 # and 'cargo run' plain to compile and execute the project.
 
-# This is needed for GLFW linkage errors.
+# This is needed for SDL2 linkage errors.
 
-# This assumes you are using homebrew for your GLFW installation.
+# This assumes you are using homebrew for your SDL2 installation.
 
-glfw_path=$(brew --prefix glfw)
-export RUSTFLAGS="-L $glfw_path/lib -l glfw"
+export RUSTFLAGS="-L $(brew --prefix sdl2)/lib -l sdl2"
