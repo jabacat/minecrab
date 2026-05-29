@@ -12,11 +12,4 @@ then
 	return 1
 fi
 
-if brew ls --versions pkg-config &> /dev/null;
-then
-	# prefer to use pkg-config to detect correct compile flags
-	export RUSTFLAGS="${RUSTFLAGS}  $(pkg-config --libs sdl3)"
-else
-	# fallback to old method
-	export RUSTFLAGS="-L $(brew --prefix sdl3)/lib -l sdl3"
-fi
+export LIBRARY_PATH="$LIBRARY_PATH:$(brew --prefix)/lib"
