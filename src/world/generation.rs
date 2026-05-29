@@ -169,6 +169,7 @@ impl World {
         );
 
         world_renderer.add_mesh(
+            self.next_gen_x, self.next_gen_y, self.next_gen_z,
             worldmesh::build_geometry_chunk(
                 self, self.next_gen_x, self.next_gen_y, self.next_gen_z
             )
