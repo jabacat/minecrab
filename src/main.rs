@@ -53,7 +53,7 @@ fn main() {
         .size(WINDOW_WIDTH, WINDOW_HEIGHT)
         .title("Minecrab")
         .vsync()
-        // .highdpi()   // disabled since switching to SDL
+        .highdpi()   // disabled since switching to SDL
         .build();
 
     // Disable exit on esc (default raylib behavior)
@@ -87,6 +87,9 @@ fn main() {
     let mut window_should_close = false;
     let mut pause_menu = PauseMenu::new();
     let mut debug_display = false; // toggle
+
+    // DEBUG
+    rl.set_target_fps(1);
 
     while !window_should_close {
         window_should_close |= rl.window_should_close();
@@ -139,8 +142,8 @@ fn main() {
 
             world_renderer.render(&mut d, player.camera);
 
-            let w = d.get_screen_width();
-            let h = d.get_screen_height();
+            let w = d.get_render_width();
+            let h = d.get_render_height();
 
             // Crosshair
             d.draw_line_ex(

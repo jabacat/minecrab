@@ -184,6 +184,16 @@ impl PauseMenu {
 
         let Vector2 { x: mx, y: my } = rl.get_mouse_position();
 
+        // XXX: Convert mouse coordinates from screen to render space
+        // SDL reports event coordinates (i.e. mouse position) in screen
+        // coordinates, while rendering things in render coordinates when under
+        // high DPI scaling. The latter allows for us to draw 1:1 with the
+        // physical pixels on the screen, rather than get scaled by the OS.
+        // SDL exposes some functions to convert between the two, but raylib
+        // doesn't seem to be using them properly (upstream issue).
+        let render_scale = rl.get_render_width() as f32 / rl.get_screen_width() as f32;
+        let (mx, my) = (mx * render_scale, my * render_scale);
+
         let lmb_pressed = rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT);
 
         if let Some(new_state) = root_element.check_mouse(rl, mx as i32, my as i32, lmb_pressed) {
@@ -200,8 +210,9 @@ impl PauseMenu {
             return;
         };
 
-        let screen_width = d.get_screen_width();
-        let screen_height = d.get_screen_height();
+        let screen_width = d.get_render_width();
+        let screen_height = d.get_render_height();
+        dbg!(screen_width, screen_height);
 
         // Tint screen
         d.draw_rectangle(0, 0, screen_width, screen_height, PAUSE_BG);
