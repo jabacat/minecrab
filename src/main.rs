@@ -54,7 +54,6 @@ fn main() {
         .title("Minecrab")
         .vsync()
         // .highdpi()   // disabled since switching to SDL
-        .msaa_4x()
         .build();
 
     // Disable exit on esc (default raylib behavior)
