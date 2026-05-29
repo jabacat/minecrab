@@ -172,6 +172,7 @@ impl World {
         );
 
         world_renderer.add_mesh(
+            self.next_gen_x, self.next_gen_y, self.next_gen_z,
             worldmesh::build_geometry_chunk(
                 self, self.next_gen_x, self.next_gen_y, self.next_gen_z
             )
@@ -191,10 +192,9 @@ impl World {
     pub fn mesh_all_chunks(&mut self, world_renderer: &mut worldmesh::WorldRenderer) {
         world_renderer.clear_meshes();
         for (k, v) in &self.chunks {
-            world_renderer.add_mesh(worldmesh::build_geometry_chunk(self, k.0, k.1, k.2));
+            world_renderer.add_mesh(k.0, k.1, k.2, worldmesh::build_geometry_chunk(self, k.0, k.1, k.2));
         }
     }
-
 }
 
 

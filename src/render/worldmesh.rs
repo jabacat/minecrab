@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use std::collections::HashMap;
 
 use crate::mesh_tools::VecMesh;
 use crate::world::blocks::{BlockData, BlockTextureCoordinates};
@@ -153,9 +154,8 @@ pub fn build_geometry_chunk(world: &World, cx: i64, cy: i64, cz: i64) -> Mesh {
 }
 
 pub struct WorldRenderer {
-    // Right now, all we need is a list of meshes to render.
-    // IN THE FUTURE, this should be a map of some sort.
-    chunk_meshes: Vec<Mesh>,
+    // Meshes are stored with a key of their chunk index
+    chunk_meshes: HashMap<(i64, i64, i64), Mesh>,
     material: WeakMaterial,
 }
 
@@ -163,13 +163,14 @@ impl WorldRenderer {
 
     pub fn new(material: WeakMaterial) -> WorldRenderer {
         WorldRenderer {
-            chunk_meshes: Vec::new(),
+            chunk_meshes: HashMap::new(),
             material: material,
         }
     }
 
-    pub fn add_mesh(&mut self, mesh: Mesh) {
-        self.chunk_meshes.push(mesh)
+    pub fn add_mesh(&mut self, cx: i64, cy: i64, cz: i64, mesh: Mesh) {
+        // Insert will overwrite the mesh based on their chunk index
+        self.chunk_meshes.insert((cx, cy, cz), mesh);
     }
 
     pub fn clear_meshes(&mut self) {
@@ -178,7 +179,7 @@ impl WorldRenderer {
 
     pub fn render(&mut self, d: &mut RaylibDrawHandle, camera: Camera3D) {
         d.draw_mode3D(camera, |mut d2, _camera| {
-            for mesh in &self.chunk_meshes {
+            for (_, mesh) in &self.chunk_meshes {
                 d2.draw_mesh(mesh, self.material.clone(), Matrix::identity());
             }
         });
