@@ -30,7 +30,8 @@ pub struct World {
     next_gen_y: i64,
     next_gen_z: i64,
 
-    pub chunks: HashMap<(i64, i64, i64), Chunk>
+    pub chunks: HashMap<(i64, i64, i64), Chunk>,
+    pub ticks: i32,
 }
 
 impl Chunk {
@@ -72,6 +73,7 @@ impl World {
             next_gen_x: -WORLD_RADIUS,
             next_gen_y: -WORLD_RADIUS,
             next_gen_z: -WORLD_RADIUS,
+            ticks: 0,
         }
     }
 

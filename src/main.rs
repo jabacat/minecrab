@@ -118,6 +118,8 @@ fn main() {
         while next_tick_in < 0_f32 {
             tick(&mut world, &mut player, &mut rl);
             next_tick_in += TICK_LENGTH;
+
+            world.ticks += 1;
         }
 
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
@@ -162,7 +164,7 @@ fn main() {
             skybox_cam.position = Vector3::new(0.0, 0.0, 0.0);
             skybox_cam.target -= player.camera.position;
 
-            let day_amount: f32 = day_amount(frame);
+            let day_amount: f32 = day_amount(world.ticks);
             let skybox_loc = skybox_shader.get_shader_location("dayAmount");
             let block_loc = block_shader.get_shader_location("dayAmount");
             skybox_shader.set_shader_value(skybox_loc, day_amount);
