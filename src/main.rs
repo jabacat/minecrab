@@ -151,6 +151,11 @@ fn main() {
                     update_mesh_on_hit(&mut world, h, &mut world_renderer);
                 }
             }
+
+            if frame % FRAMES_PER_CHUNK == 0 {
+                world.generate_next_chunk(&mut world_renderer);
+            }
+            frame += 1;
         }
 
         rl.draw(&thread, |mut d| {
@@ -231,10 +236,5 @@ fn main() {
             // Render pause menu
             pause_menu.render(&mut d);
         });
-
-        if frame % FRAMES_PER_CHUNK == 0 {
-            world.generate_next_chunk(&mut world_renderer);
-        }
-        frame += 1;
     }
 }
