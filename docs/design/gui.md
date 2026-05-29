@@ -74,24 +74,13 @@ with the necessary Boxes.
 -left corner, and `width` and `height` denote their respective attributes.
 
 `Button` renders a rectangular button with a semi-opaque black background and a
-white border. When highlighted, the background becomes a semi-opaque blue.
+white border. When highlighted, the background becomes a semi-opaque blue. The
+`text` is centered in both directions.
 
-`Button` takes a special field `button` that implements the trait `ButtonType`.
-This field dictates the return type of `check_mouse` via an associated type
-stored within the trait.
-
-#### The `ButtonType` trait
-
-This trait acts as part of the model, view, and controller of the `Button`.
-
-- `type T`: This is the associated type that dictates the generic type of
-`GuiElement<T>` that the `Button` will implement. This type is the return type
-of `act` and also the `Button`'s `check_mouse`. Be sure to set this in your
-struct implementation.
-- `fn get_text(&self) -> &str`: this function should return the text to render
-on the button
-- `fn act(&self, rl: &mut RaylibHandle) -> Option<Self::T>`: this function
-will be called when the button is clicked. This part of the API will probably
-have to be redesigned in the future.
-
-This trait is probably one of the worst parts of the API design.
+The `act` field takes a function pointer that serves as the controller of the
+button, i.e. it processes inputs and changes state. Currently, act is only
+called when the mouse is hovering over the button and the left mouse button is
+pressed. `act` should take a `&mut RaylibHandle` and return an `Option<T>`.
+The return type is a hacky workaround to allow buttons to mutate the state of
+the pause menu by returning the desired state: the pause menu calls `set_state`
+on the return value.

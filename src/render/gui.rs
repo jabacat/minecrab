@@ -27,8 +27,8 @@ macro_rules! row {
 }
 
 macro_rules! button {
-    ( $e:expr ) => {
-        Box::new(Button::new($e))
+    ( $t:expr, $a:expr ) => {
+        Box::new(Button::new($t, $a))
     };
 }
 
@@ -46,41 +46,32 @@ pub trait GuiElement<T> {
     ) -> Option<T>;
 }
 
-pub trait ButtonType {
-    // XXX: this is known as an "associated type."
-    // XXX: It is necessary to prevent errors and is preferred in rust
-    // XXX: It makes things absolutely unreadable.
-    type T;
-
-    fn get_text(&self) -> &str;
-    fn act(&self, rl: &mut RaylibHandle) -> Option<Self::T>;
-}
-
-#[derive(Clone, Copy)]
-pub struct Button<BT: ButtonType> {
+pub struct Button<T> {
     x: i32,
     y: i32,
     width: i32,
     height: i32,
-    button: BT,
+    text: &'static str,
+    act: Box<dyn Fn(&mut RaylibHandle) -> Option<T>>,
 
     hover: bool,
 }
 
-impl<BT: ButtonType> Button<BT> {
-    pub fn new(button: BT) -> Self {
+impl<T> Button<T> {
+    pub fn new(text: &'static str, act: Box<dyn Fn(&mut RaylibHandle) -> Option<T>>) -> Self {
         Button {
             x: -1,
             y: -1,
             width: -1,
             height: BUTTON_HEIGHT,
-            button,
+            text,
+            act,
             hover: false,
         }
     }
 }
 
-impl<BT: ButtonType> GuiElement<BT::T> for Button<BT> {
+impl<T> GuiElement<T> for Button<T> {
     fn get_total_width(&self) -> i32 {
         todo!()
     }
@@ -112,10 +103,10 @@ impl<BT: ButtonType> GuiElement<BT::T> for Button<BT> {
         );
         d.draw_rectangle_lines(x, y, width, BUTTON_HEIGHT, BUTTON_BORDER_COLOR);
 
-        let text_width = d.measure_text(self.button.get_text(), FONT_SIZE);
+        let text_width = d.measure_text(self.text, FONT_SIZE);
         let text_x = (width - text_width) / 2 + x;
         let text_y = (BUTTON_HEIGHT - FONT_SIZE) / 2 + y;
-        d.draw_text(self.button.get_text(), text_x, text_y, FONT_SIZE, BUTTON_FG);
+        d.draw_text(self.text, text_x, text_y, FONT_SIZE, BUTTON_FG);
     }
 
     fn check_mouse(
@@ -124,11 +115,11 @@ impl<BT: ButtonType> GuiElement<BT::T> for Button<BT> {
         mx: i32,
         my: i32,
         lmb_pressed: bool,
-    ) -> Option<BT::T> {
+    ) -> Option<T> {
         self.hover = (self.x..(self.x + self.width)).contains(&(mx as i32))
             && (self.y..(self.y + self.height)).contains(&(my as i32));
         if self.hover && lmb_pressed {
-            self.button.act(rl)
+            (self.act)(rl)
         } else {
             None
         }
