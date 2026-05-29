@@ -3,15 +3,15 @@ use raylib::models::{Mesh, RaylibMesh};
 use crate::render::mesh_tools::VecMesh;
 
 // How many frames until day/night events happen.
-const FRAMES_UNTIL_SUNSET: i32 = 1000;
-const FRAMES_UNTIL_DUSK: i32 = 1150;
-const FRAMES_UNTIL_DAWN: i32 = 1850;
-const FRAMES_UNTIL_DAY: i32 = 2000;
+const FRAMES_UNTIL_SUNSET: u64 = 1000;
+const FRAMES_UNTIL_DUSK: u64 = 1150;
+const FRAMES_UNTIL_DAWN: u64 = 1850;
+const FRAMES_UNTIL_DAY: u64 = 2000;
 
 // Computes how much "day" there is (from 1.0 during the day to 0.0 at night,
 // with intermediate amounts at dawn and dusk) given the number of frames that
 // have elapsed since world creation.
-pub fn day_amount(frames: i32) -> f32 {
+pub fn day_amount(frames: u64) -> f32 {
     let time_in_day = frames % FRAMES_UNTIL_DAY;
     if time_in_day < FRAMES_UNTIL_SUNSET {
         return 1.0;
