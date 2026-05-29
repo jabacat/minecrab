@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 noise = "0.9"
-raylib = { package = "sola-raylib", version = "6.1", features = [ "sdl" ] }
+raylib = { package = "sola-raylib", git = "https://github.com/Sophon96/sola-raylib.git", branch = "stable-patching", commit = "49a13f9", features = [ "sdl" ] }
