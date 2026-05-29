@@ -79,24 +79,21 @@ fn main() {
 
     let mut skybox_mesh: Mesh = create_skybox_mesh();
     let mut skybox_material = rl.load_material_default(&thread);
-    unsafe {
-        let shader = rl.load_shader(
+    let skybox_shader = rl.load_shader(
             &thread,
             Some("src/shader/skybox.vert"), 
             Some("src/shader/skybox.frag")
         );
-        skybox_material.shader = shader.unwrap();
-    }
+    skybox_material.shader = *skybox_shader.as_ref();
 
     let mut material = rl.load_material_default(&thread);
-    unsafe {
-        let shader = rl.load_shader(
-            &thread, 
-            Some("src/shader/block.vert"), 
-            Some("src/shader/block.frag")
-        );
-        material.shader = shader.unwrap();
-    }
+    let block_shader = rl.load_shader(
+        &thread, 
+        Some("src/shader/block.vert"), 
+        Some("src/shader/block.frag")
+    );
+    material.shader = *block_shader.as_ref();
+    
     let maps = material.maps_mut();
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
