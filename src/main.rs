@@ -60,7 +60,7 @@ fn main() {
         .build();
 
     // Disable exit on esc (default raylib behavior)
-    rl.set_exit_key(Some(KeyboardKey::KEY_NULL));
+    rl.set_exit_key(None);
 
     let mut player = Player::new();
 

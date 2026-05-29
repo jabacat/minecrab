@@ -141,7 +141,7 @@ impl PauseMenu {
     }
 
     pub fn update(&mut self, rl: &mut RaylibHandle) {
-        if matches!(rl.get_key_pressed(), Some(KeyboardKey::KEY_ESCAPE)) {
+        if rl.get_key_pressed() == Some(KeyboardKey::KEY_ESCAPE) {
             match self.state {
                 PauseMenuState::Running => {
                     self.set_state(rl, PauseMenuState::Paused);
