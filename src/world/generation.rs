@@ -1,5 +1,6 @@
 use noise::{NoiseFn, SuperSimplex};
 use raylib::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
@@ -9,6 +10,7 @@ use crate::world::blocks::BlockData;
 pub const CHUNK_SIZE: i64 = 32;
 const WORLD_RADIUS: i64 = 2;
 
+#[derive(Serialize, Deserialize)]
 pub struct Chunk {
     /* absolute chunk coordinates
      * 1 unit = CHUNK_SIZE blocks */
@@ -25,6 +27,7 @@ pub struct Chunk {
     voxels: Box<[BlockData]>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct World {
     next_gen_x: i64,
     next_gen_y: i64,
@@ -186,6 +189,12 @@ impl World {
         }
     }
 
+    pub fn mesh_all_chunks(&mut self, world_renderer: &mut worldmesh::WorldRenderer) {
+        world_renderer.clear_meshes();
+        for (k, v) in &self.chunks {
+            world_renderer.add_mesh(k.0, k.1, k.2, worldmesh::build_geometry_chunk(self, k.0, k.1, k.2));
+        }
+    }
 }
 
 

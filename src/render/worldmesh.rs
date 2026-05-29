@@ -6,7 +6,7 @@ use crate::world::blocks::{BlockData, BlockTextureCoordinates};
 use crate::world::generation::{CHUNK_SIZE, World};
 
 pub fn build_geometry_voxel(
-    world: &mut World, vmesh: &mut VecMesh, x: i64, y: i64, z: i64
+    world: &World, vmesh: &mut VecMesh, x: i64, y: i64, z: i64
 ) {
     let block_type = world.get_block_data(x, y, z);
     if block_type == BlockData::AIR { return }
@@ -119,7 +119,7 @@ pub fn build_geometry_voxel(
     }
 }
 
-pub fn build_geometry_chunk(world: &mut World, cx: i64, cy: i64, cz: i64) -> Mesh {
+pub fn build_geometry_chunk(world: &World, cx: i64, cy: i64, cz: i64) -> Mesh {
     let mut vmesh = VecMesh::new();
     
     assert!(world.chunks.contains_key(&(cx, cy, cz)));
@@ -171,6 +171,10 @@ impl WorldRenderer {
     pub fn add_mesh(&mut self, cx: i64, cy: i64, cz: i64, mesh: Mesh) {
         // Insert will overwrite the mesh based on their chunk index
         self.chunk_meshes.insert((cx, cy, cz), mesh);
+    }
+
+    pub fn clear_meshes(&mut self) {
+        self.chunk_meshes.clear();
     }
 
     pub fn render(&mut self, d: &mut RaylibDrawHandle, camera: Camera3D) {

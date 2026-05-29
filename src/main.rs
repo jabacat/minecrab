@@ -1,4 +1,4 @@
-use std::ptr;
+use std::fs;
 
 use raylib::prelude::*;
 
@@ -123,6 +123,23 @@ fn main() {
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
             debug_display = !debug_display;
             if debug_display { open_sound.play() } else { close_sound.play() };
+        }
+
+        // FIXME: implement saving menu (waiting on #58)
+        // Q for save
+        if rl.is_key_pressed(KeyboardKey::KEY_Q) {
+            let buf = rmp_serde::to_vec(&world).unwrap();
+            fs::write("world.bin", buf);
+        }
+
+        // L for load
+        if rl.is_key_pressed(KeyboardKey::KEY_L) {
+            // FIXME: implement proper error handling
+            let bytes = fs::read("world.bin").unwrap();
+            world = rmp_serde::from_slice(&bytes).expect("deserialize failed");
+
+            // reset world renderer
+            world.mesh_all_chunks(&mut world_renderer);
         }
 
         // Remove block
