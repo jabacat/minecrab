@@ -23,7 +23,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl3-dev
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl2-dev
       
       - name: Build
         run: cargo build --verbose
@@ -41,7 +41,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Dependencies
-        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl3-dev
+        run: sudo apt-get update && sudo apt-get install -y build-essential cmake libclang-dev libsdl2-dev
       
       - name: Test
         run: cargo test --verbose
