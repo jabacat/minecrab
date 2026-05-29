@@ -212,7 +212,6 @@ impl PauseMenu {
 
         let screen_width = d.get_render_width();
         let screen_height = d.get_render_height();
-        dbg!(screen_width, screen_height);
 
         // Tint screen
         d.draw_rectangle(0, 0, screen_width, screen_height, PAUSE_BG);

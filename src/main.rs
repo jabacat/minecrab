@@ -88,9 +88,6 @@ fn main() {
     let mut pause_menu = PauseMenu::new();
     let mut debug_display = false; // toggle
 
-    // DEBUG
-    rl.set_target_fps(1);
-
     while !window_should_close {
         window_should_close |= rl.window_should_close();
 
