@@ -191,7 +191,7 @@ impl World {
 
         // Iterate from -radius to radius from lowest magnitude
         // Probably not the most efficient way to to do this
-        let mut delta = (-radius..radius).collect::<Vec<i64>>();
+        let mut delta = (-radius..=radius).collect::<Vec<i64>>();
         delta.sort_by_key(|i| i.abs());
 
         for dx in &delta {
