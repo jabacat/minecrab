@@ -3,15 +3,15 @@ use raylib::models::{Mesh, RaylibMesh};
 use crate::render::mesh_tools::VecMesh;
 
 // How many frames until day/night events happen.
-const FRAMES_UNTIL_SUNSET: i32 = 1000;
-const FRAMES_UNTIL_DUSK: i32 = 1150;
-const FRAMES_UNTIL_DAWN: i32 = 1850;
-const FRAMES_UNTIL_DAY: i32 = 2000;
+const FRAMES_UNTIL_SUNSET: u32 = 1000;
+const FRAMES_UNTIL_DUSK: u32 = 1150;
+const FRAMES_UNTIL_DAWN: u32 = 1850;
+const FRAMES_UNTIL_DAY: u32 = 2000;
 
 // Computes how much "day" there is (from 1.0 during the day to 0.0 at night,
 // with intermediate amounts at dawn and dusk) given the number of frames that
 // have elapsed since world creation.
-pub fn day_amount(frames: i32) -> f32 {
+pub fn get_sky_brightness(frames: u32) -> f32 {
     let time_in_day = frames % FRAMES_UNTIL_DAY;
     if time_in_day < FRAMES_UNTIL_SUNSET {
         return 1.0;
@@ -30,7 +30,7 @@ pub fn day_amount(frames: i32) -> f32 {
 // the actual terrain.
 const SK_DIST: f32 = 200.;
 
-pub fn create_skybox_mesh() -> Mesh {
+pub fn create_mesh() -> Mesh {
     let mut vmesh = VecMesh::new();
     vmesh.vertices.extend_from_slice(&[
         // East face

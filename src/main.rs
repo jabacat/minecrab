@@ -1,5 +1,3 @@
-use std::ptr;
-
 use raylib::prelude::*;
 
 mod player;
@@ -7,27 +5,27 @@ mod render;
 mod world;
 mod game;
 
-use player::{Player, update_camera_angle, update_camera_position};
+use player::Player;
 use world::generation::World;
-use world::collision::{voxel_raycast, VoxelRaycastHit};
 
-use game::GameData;
+use game::*;
 
-use crate::render::mesh_tools;
-use crate::render::pause_menu::PauseMenu;
-use crate::render::skybox::{create_skybox_mesh, day_amount};
-use crate::render::worldmesh::{WorldRenderer, build_geometry_chunk};
+use render::{mesh_tools, pause_menu::PauseMenu, skybox};
+use render::worldmesh::WorldRenderer;
+
+use std::time::Instant;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
+const TICKRATE: u32 = 40;
+const TICK_LENGTH: f32 = 1./(TICKRATE as f32);
 
-const TICK_LENGTH: f32 = 0.025; // 40 ticks per second
-
-// Generate one chunk every [FRAMES_PER_CHUNK] frames so world generation isn't
-// exceedingly laggy at the beginning.
-const FRAMES_PER_CHUNK: i32 = 5;
-
-
+//struct RenderData {
+//    pub skybox_mesh: Mesh,
+//    
+//    pub skybox_material: WeakMaterial,
+//    pub block_material: WeakMaterial
+//}
 
 fn main() {
     let (mut rl, thread) = raylib::init()
@@ -49,8 +47,8 @@ fn main() {
         unsafe { t.unwrap() }
     };
 
-    let mut skybox_mesh: Mesh = create_skybox_mesh();
-    let mut skybox_material = rl.load_material_default(&thread);
+    let mut skybox_mesh: Mesh = skybox::create_mesh();
+    let mut skybox_material: WeakMaterial = rl.load_material_default(&thread);
     let mut skybox_shader = rl.load_shader(
         &thread,
         Some("src/shader/skybox.vert"), 
@@ -69,34 +67,55 @@ fn main() {
     let maps = material.maps_mut();
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
-    // don't you dare create a "new" or "init"
-    // method for this struct
+    // create a static reference to audio_stream and sounds.
+    // not sure if there's a better way to do this.
+    let audio_stream = Box::leak(Box::new(
+        RaylibAudio::init_audio_device().expect("init audio")
+    ));
+    let sounds = Box::leak(Box::new(
+        Sounds {
+            menu_open: audio_stream
+                .new_sound(&"assets/audio/menu-open.ogg")
+                .expect(&"load sound"),
+            menu_close: audio_stream
+                .new_sound(&"assets/audio/menu-close.ogg")
+                .expect(&"load sound"),
+        }
+    ));
+
+    // don't you dare create a "new"
+    // or "init" method for this struct
     let mut gd = GameData {
         rl,
-        audio_stream: RaylibAudio::init_audio_device()
-            .expect("Can init audio."),
-
+        sounds,
         player: Player::new(),
         world: World::new(),
         world_renderer: WorldRenderer::new(material),
         debug_info: String::new(),
         debug_info_shown: false,
+        paused: false,
         pause_menu: PauseMenu::new(),
         tick_counter: 0,
+        frame_counter: 0,
+        last_tick_time: 0.,
+        last_frame_time: 0.,
     };
 
-    let (rl, world, player) = (&mut gd.rl, &mut gd.world, &mut gd.player);
-
     let mut next_tick_in = 0_f32;
-    let mut frame: i32 = 0;
 
-    while !rl.window_should_close() && !gd.pause_menu.should_quit() {
+    while !gd.rl.window_should_close() && !gd.pause_menu.should_quit() {
 
-        next_tick_in -= rl.get_frame_time();
+        gd.last_frame_time = gd.rl.get_frame_time();
+        next_tick_in -= gd.last_frame_time;
         while next_tick_in < 0_f32 {
+            let tick_start = Instant::now();
             game::tick(&mut gd);
+            gd.tick_counter += 1;
+            gd.last_tick_time = tick_start.elapsed().as_secs_f32();
             next_tick_in += TICK_LENGTH;
         }
+
+        let (rl, player) = (&mut gd.rl, &mut gd.player);
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
@@ -110,7 +129,7 @@ fn main() {
             skybox_cam.position = Vector3::new(0.0, 0.0, 0.0);
             skybox_cam.target -= player.camera.position;
 
-            let day_amount: f32 = day_amount(frame);
+            let day_amount: f32 = skybox::get_sky_brightness(gd.tick_counter);
             let skybox_loc = skybox_shader.get_shader_location("dayAmount");
             let block_loc = block_shader.get_shader_location("dayAmount");
             skybox_shader.set_shader_value(skybox_loc, day_amount);
@@ -122,30 +141,34 @@ fn main() {
 
             gd.world_renderer.render(&mut d, player.camera);
 
-            let w = d.get_render_width();
-            let h = d.get_render_height();
-
-            // Crosshair
-            d.draw_line_ex(
-                rvec2(w / 2 - 10, h / 2),
-                rvec2(w / 2 + 10, h / 2),
-                3.0,
-                Color::WHITESMOKE,
-            );
-
-            d.draw_line_ex(
-                rvec2(w / 2, h / 2 - 10),
-                rvec2(w / 2, h / 2 + 10),
-                3.0,
-                Color::WHITESMOKE,
-            );
+            draw_crosshair(&mut d);
 
             if gd.debug_info_shown {
-                d.draw_text(&gd.debug_info, 20, 20, 16, Color::DARKGREEN);
+                d.draw_text(&gd.debug_info, 20, 20, 16, Color::DARKGRAY);
             }
 
             // Render pause menu
-            pause_menu.render(&mut d);
+            gd.pause_menu.render(&mut d);
         });
+
+        gd.frame_counter += 1;
     }
+}
+
+fn draw_crosshair(d: &mut RaylibDrawHandle) {
+    let w = d.get_render_width();
+    let h = d.get_render_height();
+    d.draw_line_ex(
+        rvec2(w / 2 - 10, h / 2),
+        rvec2(w / 2 + 10, h / 2),
+        3.0,
+        Color::WHITESMOKE,
+    );
+
+    d.draw_line_ex(
+        rvec2(w / 2, h / 2 - 10),
+        rvec2(w / 2, h / 2 + 10),
+        3.0,
+        Color::WHITESMOKE,
+    );
 }

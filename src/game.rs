@@ -20,8 +20,9 @@ pub struct Sounds<'a> {
 }
 
 pub struct GameData {
+    pub paused: bool,
+
     pub rl: RaylibHandle,
-    pub audio_stream: RaylibAudio,
 
     pub player: Player,
     pub world: World,
@@ -29,64 +30,79 @@ pub struct GameData {
     // will be removed
     pub world_renderer: WorldRenderer,
 
+    pub pause_menu: PauseMenu,
+
     // set every tick to the string to show on the debug screen
     pub debug_info: String,
     pub debug_info_shown: bool,
 
-    pub pause_menu: PauseMenu,
-
     pub tick_counter: u32,
+    pub frame_counter: u32,
 
+    // in seconds. could use std::time::Duration but i don't see the point.
+    pub last_tick_time: f32,
+    pub last_frame_time: f32,
+
+    // commented out to stop dead code warning,
+    // not sure if we'll need it later or not.
+    //
+    // pub audio_stream: &'static RaylibAudio,
     pub sounds: &'static Sounds<'static>
 }
 
 pub fn tick(gd: &mut GameData) {
-    let (rl, world, player) = (&mut gd.rl, &mut gd.world, &mut gd.player);
+    //if gd.rl.is_key_pressed(KEY_ESCAPE) { gd.paused = !gd.paused; }
+    gd.pause_menu.update(&mut gd.rl);
 
-    update_camera_position(player, rl);
-    update_camera_angle(player, rl);
+    if gd.paused {
+        //show pause menu
+    } else {
+        let (rl, world, player) = (&mut gd.rl, &mut gd.world, &mut gd.player);
 
-    gd.pause_menu.update(rl);
-    
-    if rl.is_key_pressed(KEY_BACKSLASH) {
-        gd.debug_info_shown = !gd.debug_info_shown;
+        update_camera_position(player, rl);
+        update_camera_angle(player, rl);
 
-        if gd.debug_info_shown { &gd.sounds.menu_open }
-        else { &gd.sounds.menu_close }
-            .play();
-    }
-    
-    if rl.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
-        let hit = hit_voxel_from_player(player, world);
-        
-        if let Some(h) = hit {
-            world.set_block_data(h.x, h.y, h.z, BlockData::AIR);
-            update_mesh_on_hit(world, h, &mut gd.world_renderer);
+
+        if rl.is_key_pressed(KEY_BACKSLASH) {
+            gd.debug_info_shown = !gd.debug_info_shown;
+
+            if gd.debug_info_shown { &gd.sounds.menu_open }
+            else { &gd.sounds.menu_close }
+                .play();
         }
-    }
-    
-    // Add stone block
-    if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
-        let hit = hit_voxel_from_player(player, world);
         
-        if let Some(h) = hit {
-            world.set_block_data(
-                h.x + h.normal_x as i64,
-                h.y + h.normal_y as i64,
-                h.z + h.normal_z as i64,
-                BlockData::STONE
-            );
-            update_mesh_on_hit(world, h, &mut gd.world_renderer);
+        if rl.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
+            let hit = hit_voxel_from_player(player, world);
+            
+            if let Some(h) = hit {
+                world.set_block_data(h.x, h.y, h.z, BlockData::AIR);
+                update_mesh_on_hit(world, h, &mut gd.world_renderer);
+            }
         }
-    }
+        
+        // Add stone block
+        if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
+            let hit = hit_voxel_from_player(player, world);
+            
+            if let Some(h) = hit {
+                world.set_block_data(
+                    h.x + h.normal_x as i64,
+                    h.y + h.normal_y as i64,
+                    h.z + h.normal_z as i64,
+                    BlockData::STONE
+                );
+                update_mesh_on_hit(world, h, &mut gd.world_renderer);
+            }
+        }
 
-    if gd.tick_counter % TICKS_PER_CHUNK == 0 {
-        world.generate_next_chunk(&mut gd.world_renderer);
-    }
+        if gd.tick_counter % TICKS_PER_CHUNK == 0 {
+            world.generate_next_chunk(&mut gd.world_renderer);
+        }
 
-    gd.debug_info =
-        if gd.debug_info_shown { debug_info_fmt(gd) }
-        else { String::new() };
+        gd.debug_info =
+            if gd.debug_info_shown { debug_info_fmt(gd) }
+            else { String::new() };
+    }
 }
 
 fn debug_info_fmt(gd: &mut GameData) -> String {
@@ -110,7 +126,7 @@ fn debug_info_fmt(gd: &mut GameData) -> String {
         FPS: {fps}
         tick: {tick_counter}
     ").lines()
-        .map(|l| l.trim_start())
+        .map(|l| String::from(l.trim_start()) + "\n")
         .collect();
 }
 
