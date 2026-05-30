@@ -10,7 +10,6 @@ use crate::render::worldmesh;
 use crate::world::blocks::BlockData;
 
 pub const CHUNK_SIZE: i64 = 32;
-const WORLD_RADIUS: i64 = 2;
 
 #[derive(Clone)]
 pub struct Chunk {
@@ -32,10 +31,6 @@ pub struct Chunk {
 }
 
 pub struct World {
-    next_gen_x: i64,
-    next_gen_y: i64,
-    next_gen_z: i64,
-
     input_tx: Sender<(i64, i64, i64, Option<Chunk>)>,
     result_rx: Receiver<(i64, i64, i64, Option<Chunk>, VecMesh)>,
     chunk_gen_thread: JoinHandle<()>,
@@ -43,6 +38,7 @@ pub struct World {
     chunks_in_progress: HashSet<(i64, i64, i64)>,
 
     pub chunks: HashMap<(i64, i64, i64), Chunk>,
+    pub ticks: u64,
 }
 
 impl Chunk {
@@ -99,13 +95,11 @@ impl World {
 
         Self {
             chunks: HashMap::new(),
-            next_gen_x: -WORLD_RADIUS,
-            next_gen_y: -WORLD_RADIUS,
-            next_gen_z: -WORLD_RADIUS,
             input_tx,
             result_rx,
             chunk_gen_thread,
             chunks_in_progress: HashSet::new(),
+            ticks: 0,
         }
     }
 
@@ -149,25 +143,6 @@ impl World {
             chunk.set_block_data(x, y, z, value)
         } else {
             panic!("set block data in a chunk that doesn't exist");
-        }
-    }
-
-    pub fn generate_next_chunk(self: &mut Self) {
-        if self.next_gen_x > WORLD_RADIUS {
-            // No more chunks left to generate.
-            return;
-        }
-
-        self.dispatch_chunk_gen(self.next_gen_x, self.next_gen_y, self.next_gen_z);
-
-        self.next_gen_z += 1;
-        if self.next_gen_z > WORLD_RADIUS {
-            self.next_gen_y += 1;
-            if self.next_gen_y > WORLD_RADIUS {
-                self.next_gen_x += 1;
-                self.next_gen_y = -WORLD_RADIUS;
-            }
-            self.next_gen_z = -WORLD_RADIUS;
         }
     }
 
@@ -285,6 +260,27 @@ impl World {
             };
 
             chunk.set_block_data(x, y, z, block_data);
+        }
+    }
+
+    pub fn generate_surrounding_chunks(&mut self, px: i64, py: i64, pz: i64, radius: i64) {
+        let (cx, cy, cz) = World::get_chunk_coords_of_block(px, py, pz);
+
+        // Iterate from -radius to radius from lowest magnitude
+        // Probably not the most efficient way to to do this
+        let mut delta = (-radius..=radius).collect::<Vec<i64>>();
+        delta.sort_by_key(|i| i.abs());
+
+        for dx in &delta {
+            for dy in &delta {
+                for dz in &delta {
+                    let (cx, cy, cz) = (cx + dx, cy + dy, cz + dz);
+                    
+                    if !self.chunks.contains_key(&(cx, cy, cz)) {
+                        self.dispatch_chunk_gen(cx, cy, cz);
+                    }
+                }
+            }
         }
     }
 }
