@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::ptr;
 
 use raylib::prelude::*;
@@ -60,6 +61,8 @@ fn main() {
 
     let mut first_click = false;
     let mut debug_display = false; // toggle
+    let mut debug_frame_times: VecDeque<f32> = VecDeque::new();
+    let mut debug_frame_time_stats: Option<(f32, f32, f32)> = None;
 
     let mut next_tick_in = 0_f32; // time until we run update_camera()
 
@@ -120,7 +123,24 @@ fn main() {
         while next_tick_in < 0_f32 {
             tick(&mut world, &mut player, &mut rl);
             next_tick_in += TICK_LENGTH;
+
+            world.ticks += 1;
         }
+
+        // Debug: add frame times to frame time graph
+        if debug_frame_times.len() > 300 {
+            debug_frame_times.pop_front();
+
+            // compute some basic stats
+            // technically this does mean we are one frame delayed
+            // but it saves me from writing another if statement
+            // FIXME: this looks like a lot of computation but I don't think
+            // it's actually costing us any performance
+            let mut sorted_ft = debug_frame_times.iter().collect::<Vec<_>>();
+            sorted_ft.sort_by(|a, b| f32::total_cmp(*b, *a));
+            debug_frame_time_stats = Some((*sorted_ft[2], *sorted_ft[29], *sorted_ft[149]));
+        }
+        debug_frame_times.push_back(rl.get_frame_time());
 
         if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click {
             // toggle debug menu
@@ -169,7 +189,7 @@ fn main() {
             skybox_cam.position = Vector3::new(0.0, 0.0, 0.0);
             skybox_cam.target -= player.camera.position;
 
-            let day_amount: f32 = day_amount(frame);
+            let day_amount: f32 = day_amount(world.ticks);
             let skybox_loc = skybox_shader.get_shader_location("dayAmount");
             let block_loc = block_shader.get_shader_location("dayAmount");
             skybox_shader.set_shader_value(skybox_loc, day_amount);
@@ -235,6 +255,21 @@ fn main() {
                 );
                 debug_info += &format!("Frames elapsed: {}\n", frame);
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
+
+                // Draw frame time stats
+                if let Some((p100, p90, p50)) = debug_frame_time_stats {
+                    let (p100, p90, p50) = (
+                        (p100 * 1000. * 100.).trunc() / 100.,
+                        (p90 * 1000. * 100.).trunc() / 100.,
+                        (p50 * 1000. * 100.).trunc() / 100.
+                    );
+                    d.draw_text(format!("100%: {p100} | 90%: {p90} | 50%: {p50}").as_str(), 20, 100, 12, Color::RED);
+                }
+                // Draw frame time graph
+                for (i, ft) in debug_frame_times.iter().enumerate() {
+                    d.draw_rectangle(i as i32 + 20, 100 + 20, 1, (*ft * 1000.) as i32, Color::RED);
+                }
+                d.draw_line(20, 116 + 20, 320, 116 + 20, Color::GREEN);
             }
         });
 
