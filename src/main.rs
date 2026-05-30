@@ -12,7 +12,7 @@ use world::collision::{voxel_raycast, VoxelRaycastHit};
 
 use crate::render::mesh_tools;
 use crate::render::skybox::{create_skybox_mesh, day_amount};
-use crate::render::worldmesh::{WorldRenderer, build_geometry_chunk};
+use crate::render::worldmesh::{WorldRenderer};
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -42,12 +42,10 @@ fn hit_voxel_from_player(player: &mut Player, world: &mut World) -> Option<Voxel
     voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.))
 }
 
-fn update_mesh_on_hit(world: &mut World, h: VoxelRaycastHit, world_renderer: &mut WorldRenderer) {
+fn update_mesh_on_hit(world: &mut World, h: VoxelRaycastHit) {
     // Update a mesh for a given voxel in hit
     let (cx, cy, cz) = World::get_chunk_coords_of_block(h.x, h.y, h.z);
-    let mesh = build_geometry_chunk(world, cx, cy, cz);
-
-    world_renderer.add_mesh(cx, cy, cz, mesh);
+    world.dispatch_mesh_chunk(cx, cy, cz);
 }
 
 fn main() {
@@ -131,7 +129,7 @@ fn main() {
 
             if let Some(h) = hit {
                 world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                update_mesh_on_hit(&mut world, h);
             }
         }
 
@@ -146,7 +144,7 @@ fn main() {
                     h.z + h.normal_z as i64,
                     world::blocks::BlockData::STONE
                 );
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                update_mesh_on_hit(&mut world, h);
             }
         }
 
