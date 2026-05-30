@@ -188,6 +188,28 @@ impl World {
         }
     }
 
+    pub fn generate_surrounding_chunks(&mut self, world_renderer: &mut worldmesh::WorldRenderer, px: i64, py: i64, pz: i64, radius: i64) {
+        let (cx, cy, cz) = World::get_chunk_coords_of_block(px, py, pz);
+
+        // Iterate from -radius to radius from lowest magnitude
+        // Probably not the most efficient way to to do this
+        let mut delta = (-radius..=radius).collect::<Vec<i64>>();
+        delta.sort_by_key(|i| i.abs());
+
+        for dx in &delta {
+            for dy in &delta {
+                for dz in &delta {
+                    let (cx, cy, cz) = (cx + dx, cy + dy, cz + dz);
+                    
+                    if !self.chunks.contains_key(&(cx, cy, cz)) {
+                        self.generate_terrain_chunk(cx, cy, cz);
+
+                        world_renderer.add_mesh(cx, cy, cz, worldmesh::build_geometry_chunk(self, cx, cy, cz));
+                    }
+                }
+            }
+        }
+    }
 }
 
 
