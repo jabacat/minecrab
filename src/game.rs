@@ -96,7 +96,13 @@ pub fn tick(gd: &mut GameData) {
         }
 
         if gd.tick_counter % TICKS_PER_CHUNK == 0 {
-            world.generate_next_chunk(&mut gd.world_renderer);
+            //world.generate_next_chunk(&mut gd.world_renderer);
+            let Vector3 {
+                x: px,
+                y: py,
+                z: pz,
+            } = player.camera.position;
+            world.generate_surrounding_chunks(&mut gd.world_renderer, px as i64, py as i64, pz as i64, 1);
         }
 
         gd.debug_info =

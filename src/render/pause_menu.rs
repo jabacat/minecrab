@@ -82,7 +82,7 @@ impl PauseMenu {
         // FIXME: see if there is some way of not having another copy of root_element here
         // and defer everything about root_element to set_state()
         PauseMenu {
-            state: PauseMenuState::Paused,
+            state: PauseMenuState::Running,
             root_element: Some(col!([
                 pb!(PauseButtonType::BackToGame),
                 pb!(PauseButtonType::Video),

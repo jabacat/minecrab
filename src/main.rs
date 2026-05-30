@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use raylib::prelude::*;
 
 mod player;
@@ -14,6 +16,8 @@ use render::{mesh_tools, pause_menu::PauseMenu, skybox};
 use render::worldmesh::WorldRenderer;
 
 use std::time::Instant;
+
+const DBG_FONT_SIZE: i32 = 16;
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -37,6 +41,7 @@ fn main() {
 
     // Disable exit on esc (default raylib behavior)
     rl.set_exit_key(None);
+    rl.disable_cursor();
     
     let texture: ffi::Texture = {
         let mut t = rl
@@ -46,6 +51,9 @@ fn main() {
         t.gen_texture_mipmaps();
         unsafe { t.unwrap() }
     };
+    
+    let mut debug_frame_times: VecDeque<f32> = VecDeque::new();
+    let mut debug_frame_time_stats: Option<(f32, f32, f32)> = None;
 
     let mut skybox_mesh: Mesh = skybox::create_mesh();
     let mut skybox_material: WeakMaterial = rl.load_material_default(&thread);
@@ -53,17 +61,19 @@ fn main() {
         &thread,
         Some("src/shader/skybox.vert"), 
         Some("src/shader/skybox.frag")
+    
+
     );
     skybox_material.shader = *skybox_shader.as_ref();
 
     let mut material = rl.load_material_default(&thread);
     let mut block_shader = rl.load_shader(
-        &thread, 
-        Some("src/shader/block.vert"), 
-        Some("src/shader/block.frag")
+        &thread,
+        Some("src/shader/block.vert"),
+        Some("src/shader/block.frag"),
     );
     material.shader = *block_shader.as_ref();
-    
+
     let maps = material.maps_mut();
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
@@ -117,6 +127,22 @@ fn main() {
 
         let (rl, player) = (&mut gd.rl, &mut gd.player);
 
+        // Debug: add frame times to frame time graph
+        if debug_frame_times.len() > 300 {
+            debug_frame_times.pop_front();
+
+            // compute some basic stats
+            // technically this does mean we are one frame delayed
+            // but it saves me from writing another if statement
+            // FIXME: this looks like a lot of computation but I don't think
+            // it's actually costing us any performance
+            let mut sorted_ft = debug_frame_times.iter().collect::<Vec<_>>();
+            sorted_ft.sort_by(|a, b| f32::total_cmp(*b, *a));
+            debug_frame_time_stats = Some((*sorted_ft[2], *sorted_ft[29], *sorted_ft[149]));
+        }
+        debug_frame_times.push_back(rl.get_frame_time());
+
+
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
 
@@ -136,7 +162,11 @@ fn main() {
             block_shader.set_shader_value(block_loc, day_amount);
 
             d.draw_mode3D(skybox_cam, |mut d2, _camera| {
-                d2.draw_mesh(&mut skybox_mesh, skybox_material.clone(), Matrix::identity());
+                d2.draw_mesh(
+                    &mut skybox_mesh,
+                    skybox_material.clone(),
+                    Matrix::identity(),
+                );
             });
 
             gd.world_renderer.render(&mut d, player.camera);
@@ -144,7 +174,23 @@ fn main() {
             draw_crosshair(&mut d);
 
             if gd.debug_info_shown {
-                d.draw_text(&gd.debug_info, 20, 20, 16, Color::DARKGRAY);
+                d.draw_text(&gd.debug_info, 20, 20, DBG_FONT_SIZE, Color::BLACK);
+
+                let frame_graph_y = (gd.debug_info.lines().count() as i32) * DBG_FONT_SIZE + 20;
+                if let Some((p100, p90, p50)) = debug_frame_time_stats {
+                    let (p100, p90, p50) = (
+                        (p100 * 1000. * 100.).trunc() / 100.,
+                        (p90 * 1000. * 100.).trunc() / 100.,
+                        (p50 * 1000. * 100.).trunc() / 100.
+                    );
+                    let text = format!("100%: {p100} | 90%: {p90} | 50%: {p50}");
+                    d.draw_text(&text, 20, frame_graph_y, 12, Color::RED);
+                }
+                // Draw frame time graph
+                for (i, ft) in debug_frame_times.iter().enumerate() {
+                    d.draw_rectangle(i as i32 + 20, frame_graph_y + 20, 1, (*ft * 1000.) as i32, Color::RED);
+                }
+                d.draw_line(20, frame_graph_y + 36, 320, frame_graph_y + 36, Color::DARKGREEN);
             }
 
             // Render pause menu
