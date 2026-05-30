@@ -7,8 +7,8 @@ mod render;
 mod world;
 
 use player::{Player, update_camera_angle, update_camera_position};
+use world::collision::{VoxelRaycastHit, voxel_raycast};
 use world::generation::World;
-use world::collision::{voxel_raycast, VoxelRaycastHit};
 
 use crate::render::mesh_tools;
 use crate::render::skybox::{create_skybox_mesh, day_amount};
@@ -23,9 +23,7 @@ const TICK_LENGTH: f32 = 0.025; // 40 ticks per second
 // exceedingly laggy at the beginning.
 const FRAMES_PER_CHUNK: i32 = 5;
 
-fn tick(
-    world: &mut World, player: &mut Player, rl: &mut RaylibHandle
-) {
+fn tick(world: &mut World, player: &mut Player, rl: &mut RaylibHandle) {
     update_camera_position(player, rl);
     //terrain generation should be in here too, and a lot of other stuff.
     //probably need some kind of (dreaded) GameState object to keep the
@@ -66,8 +64,12 @@ fn main() {
     let mut next_tick_in = 0_f32; // time until we run update_camera()
 
     let audio_stream = RaylibAudio::init_audio_device().expect("Can init audio.");
-    let open_sound = audio_stream.new_sound(&"assets/audio/menu-open.ogg").expect("Load sound");
-    let close_sound = audio_stream.new_sound(&"assets/audio/menu-close.ogg").expect("Load sound");
+    let open_sound = audio_stream
+        .new_sound(&"assets/audio/menu-open.ogg")
+        .expect("Load sound");
+    let close_sound = audio_stream
+        .new_sound(&"assets/audio/menu-close.ogg")
+        .expect("Load sound");
 
     let mut t = rl
         .load_texture(&thread, "assets/full-textures.png")
@@ -80,20 +82,20 @@ fn main() {
     let mut skybox_mesh: Mesh = create_skybox_mesh();
     let mut skybox_material = rl.load_material_default(&thread);
     let mut skybox_shader = rl.load_shader(
-            &thread,
-            Some("src/shader/skybox.vert"), 
-            Some("src/shader/skybox.frag")
-        );
+        &thread,
+        Some("src/shader/skybox.vert"),
+        Some("src/shader/skybox.frag"),
+    );
     skybox_material.shader = *skybox_shader.as_ref();
 
     let mut material = rl.load_material_default(&thread);
     let mut block_shader = rl.load_shader(
-        &thread, 
-        Some("src/shader/block.vert"), 
-        Some("src/shader/block.frag")
+        &thread,
+        Some("src/shader/block.vert"),
+        Some("src/shader/block.frag"),
     );
     material.shader = *block_shader.as_ref();
-    
+
     let maps = material.maps_mut();
     maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
 
@@ -101,7 +103,7 @@ fn main() {
     let mut world_renderer: WorldRenderer = WorldRenderer::new(material);
 
     let mut frame: i32 = 0;
-    
+
     while !rl.window_should_close() {
         // require a click on the window before updating camera so the camera
         // doesn't fly away when the cursor enters the window at first
@@ -120,9 +122,14 @@ fn main() {
             next_tick_in += TICK_LENGTH;
         }
 
-        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click { // toggle debug menu
+        if rl.is_key_pressed(KeyboardKey::KEY_BACKSLASH) && first_click {
+            // toggle debug menu
             debug_display = !debug_display;
-            if debug_display { open_sound.play() } else { close_sound.play() };
+            if debug_display {
+                open_sound.play()
+            } else {
+                close_sound.play()
+            };
         }
 
         // Remove block
@@ -144,7 +151,7 @@ fn main() {
                     h.x + h.normal_x as i64,
                     h.y + h.normal_y as i64,
                     h.z + h.normal_z as i64,
-                    world::blocks::BlockData::STONE
+                    world::blocks::BlockData::STONE,
                 );
                 update_mesh_on_hit(&mut world, h, &mut world_renderer);
             }
@@ -169,7 +176,11 @@ fn main() {
             block_shader.set_shader_value(block_loc, day_amount);
 
             d.draw_mode3D(skybox_cam, |mut d2, _camera| {
-                d2.draw_mesh(&mut skybox_mesh, skybox_material.clone(), Matrix::identity());
+                d2.draw_mesh(
+                    &mut skybox_mesh,
+                    skybox_material.clone(),
+                    Matrix::identity(),
+                );
             });
 
             world_renderer.render(&mut d, player.camera);
@@ -193,44 +204,48 @@ fn main() {
             );
 
             if !first_click {
-                d.draw_text("WIP: Click to start updating camera", 20, 20, 16, Color::DARKGREEN);
+                d.draw_text(
+                    "WIP: Click to start updating camera",
+                    20,
+                    20,
+                    16,
+                    Color::DARKGREEN,
+                );
             }
             if debug_display {
                 let mut debug_info = String::new();
                 debug_info += &format!(
                     "Camera position: {:.4} {:.4} {:.4}\n",
-                    player.camera.position.x,
-                    player.camera.position.y,
-                    player.camera.position.z
+                    player.camera.position.x, player.camera.position.y, player.camera.position.z
                 );
-                debug_info += &format!(
-                    "FPS: {}\n",
-                    d.get_fps()
-                );
+                debug_info += &format!("FPS: {}\n", d.get_fps());
                 let p = player.camera.position;
                 let mut dir = player.camera.target - player.camera.position;
                 dir.normalize();
                 let hit = voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.));
                 debug_info += &format!(
                     "Looking at block: {}\n",
-                    hit.map_or(
-                        String::from("--"),
-                        |h| format!(
-                            "{:?} - {:.4} {:.4} {:.4}",
-                            world.get_block_data(h.x, h.y, h.z),
-                            h.x, h.y, h.z
-                        )
-                    )
+                    hit.map_or(String::from("--"), |h| format!(
+                        "{:?} - {:.4} {:.4} {:.4}",
+                        world.get_block_data(h.x, h.y, h.z),
+                        h.x,
+                        h.y,
+                        h.z
+                    ))
                 );
-                debug_info += &format!(
-                    "Frames elapsed: {}\n", frame
-                );
+                debug_info += &format!("Frames elapsed: {}\n", frame);
                 d.draw_text(&debug_info, 20, 20, 16, Color::DARKGREEN);
             }
         });
 
         if frame % FRAMES_PER_CHUNK == 0 {
-            world.generate_next_chunk(&mut world_renderer);
+            // world.generate_next_chunk(&mut world_renderer);
+            let Vector3 {
+                x: px,
+                y: py,
+                z: pz,
+            } = player.camera.position;
+            world.generate_surrounding_chunks(&mut world_renderer, px as i64, py as i64, pz as i64, 1);
         }
         frame += 1;
     }
