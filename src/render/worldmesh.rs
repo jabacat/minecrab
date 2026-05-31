@@ -3,12 +3,41 @@ use std::collections::HashMap;
 
 use crate::mesh_tools::VecMesh;
 use crate::world::blocks::{BlockData, BlockTextureCoordinates};
-use crate::world::generation::{CHUNK_SIZE, World};
+use crate::world::generation::{CHUNK_SIZE, Chunk};
 
-pub fn build_geometry_voxel(
-    world: &mut World, vmesh: &mut VecMesh, x: i64, y: i64, z: i64
+pub fn remote_build_geometry_chunk(chunk: &Chunk, cx: i64, cy: i64, cz: i64) -> VecMesh {
+    let mut vmesh = VecMesh::new();
+
+    let r = 0..CHUNK_SIZE;
+
+    for y in r.clone() { for z in r.clone() { for x in r.clone() {
+        let (x, y, z) = (
+            x + CHUNK_SIZE * cx,
+            y + CHUNK_SIZE * cy,
+            z + CHUNK_SIZE * cz
+        );
+        remote_build_geometry_voxel(chunk, &mut vmesh, x, y, z);
+    }}}
+
+
+    vmesh.indices.resize(vmesh.vertices.len() / 2, 0);
+    for i in 0..vmesh.vertices.len() / 12 {
+        let k = i as u16;
+        vmesh.indices[6 * i] = 4 * k;
+        vmesh.indices[6 * i + 1] = 4 * k + 1;
+        vmesh.indices[6 * i + 2] = 4 * k + 2;
+        vmesh.indices[6 * i + 3] = 4 * k;
+        vmesh.indices[6 * i + 4] = 4 * k + 2;
+        vmesh.indices[6 * i + 5] = 4 * k + 3;
+    }
+
+    vmesh
+}
+
+pub fn remote_build_geometry_voxel(
+    chunk: &Chunk, vmesh: &mut VecMesh, x: i64, y: i64, z: i64
 ) {
-    let block_type = world.get_block_data(x, y, z);
+    let block_type = chunk.get_block_data(x, y, z);
     if block_type == BlockData::AIR { return }
     let base = BlockTextureCoordinates::new(block_type);
     for (dx, dy, dz) in [
@@ -19,7 +48,7 @@ pub fn build_geometry_voxel(
         (0, 0, -1),
         (0, 0, 1),
     ] {
-        if world.get_block_data(x + dx, y + dy, z + dz) != BlockData::AIR {
+        if chunk.is_within_bounds(x + dx, y + dy, z + dz) && chunk.get_block_data(x + dx, y + dy, z + dz) != BlockData::AIR {
             continue;
         }
 
@@ -117,40 +146,6 @@ pub fn build_geometry_voxel(
             dx, dy, dz,
         ]);
     }
-}
-
-pub fn build_geometry_chunk(world: &mut World, cx: i64, cy: i64, cz: i64) -> Mesh {
-    let mut vmesh = VecMesh::new();
-    
-    assert!(world.chunks.contains_key(&(cx, cy, cz)));
-
-    let r = 0..CHUNK_SIZE;
-
-    for y in r.clone() { for z in r.clone() { for x in r.clone() {
-        let (x, y, z) = (
-            x + CHUNK_SIZE * cx,
-            y + CHUNK_SIZE * cy,
-            z + CHUNK_SIZE * cz
-        );
-        build_geometry_voxel(world, &mut vmesh, x, y, z);
-    }}}
-
-
-    vmesh.indices.resize(vmesh.vertices.len() / 2, 0);
-    for i in 0..vmesh.vertices.len() / 12 {
-        let k = i as u16;
-        vmesh.indices[6 * i] = 4 * k;
-        vmesh.indices[6 * i + 1] = 4 * k + 1;
-        vmesh.indices[6 * i + 2] = 4 * k + 2;
-        vmesh.indices[6 * i + 3] = 4 * k;
-        vmesh.indices[6 * i + 4] = 4 * k + 2;
-        vmesh.indices[6 * i + 5] = 4 * k + 3;
-    }
-
-    let mut mesh = vmesh.to_mesh();
-    unsafe { mesh.upload(false) };
-
-    return mesh
 }
 
 pub struct WorldRenderer {

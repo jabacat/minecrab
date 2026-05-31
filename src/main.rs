@@ -13,7 +13,7 @@ use world::generation::World;
 
 use crate::render::mesh_tools;
 use crate::render::skybox::{create_skybox_mesh, day_amount};
-use crate::render::worldmesh::{WorldRenderer, build_geometry_chunk};
+use crate::render::worldmesh::{WorldRenderer};
 
 const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
@@ -22,7 +22,7 @@ const TICK_LENGTH: f32 = 0.025; // 40 ticks per second
 
 // Generate one chunk every [FRAMES_PER_CHUNK] frames so world generation isn't
 // exceedingly laggy at the beginning.
-const FRAMES_PER_CHUNK: i32 = 5;
+const FRAMES_PER_CHUNK: i32 = 1;
 
 fn tick(world: &mut World, player: &mut Player, rl: &mut RaylibHandle) {
     update_camera_position(player, rl);
@@ -41,12 +41,10 @@ fn hit_voxel_from_player(player: &mut Player, world: &mut World) -> Option<Voxel
     voxel_raycast(&world, p.x, p.y, p.z, dir.x, dir.y, dir.z, Some(100.))
 }
 
-fn update_mesh_on_hit(world: &mut World, h: VoxelRaycastHit, world_renderer: &mut WorldRenderer) {
+fn update_mesh_on_hit(world: &mut World, h: VoxelRaycastHit) {
     // Update a mesh for a given voxel in hit
     let (cx, cy, cz) = World::get_chunk_coords_of_block(h.x, h.y, h.z);
-    let mesh = build_geometry_chunk(world, cx, cy, cz);
-
-    world_renderer.add_mesh(cx, cy, cz, mesh);
+    world.dispatch_mesh_chunk(cx, cy, cz);
 }
 
 fn main() {
@@ -158,7 +156,7 @@ fn main() {
 
             if let Some(h) = hit {
                 world.set_block_data(h.x, h.y, h.z, world::blocks::BlockData::AIR);
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                update_mesh_on_hit(&mut world, h);
             }
         }
 
@@ -173,7 +171,7 @@ fn main() {
                     h.z + h.normal_z as i64,
                     world::blocks::BlockData::STONE,
                 );
-                update_mesh_on_hit(&mut world, h, &mut world_renderer);
+                update_mesh_on_hit(&mut world, h);
             }
         }
 
@@ -273,14 +271,14 @@ fn main() {
             }
         });
 
+        let Vector3 {
+            x: px,
+            y: py,
+            z: pz,
+        } = player.camera.position;
+        world.generate_surrounding_chunks(px as i64, py as i64, pz as i64, 1);
         if frame % FRAMES_PER_CHUNK == 0 {
-            // world.generate_next_chunk(&mut world_renderer);
-            let Vector3 {
-                x: px,
-                y: py,
-                z: pz,
-            } = player.camera.position;
-            world.generate_surrounding_chunks(&mut world_renderer, px as i64, py as i64, pz as i64, 1);
+            world.poll_chunk_gen_thread(&mut world_renderer);
         }
         frame += 1;
     }

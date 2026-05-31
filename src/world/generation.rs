@@ -1,18 +1,23 @@
 use noise::{NoiseFn, SuperSimplex};
 use raylib::prelude::*;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::sync::mpsc::{self, Receiver, Sender};
+use std::thread::{self, JoinHandle};
 
+use crate::render::mesh_tools::VecMesh;
 use crate::render::worldmesh;
 use crate::world::blocks::BlockData;
 
 pub const CHUNK_SIZE: i64 = 32;
-const WORLD_RADIUS: i64 = 2;
 
+#[derive(Clone)]
 pub struct Chunk {
     /* absolute chunk coordinates
      * 1 unit = CHUNK_SIZE blocks */
-    cx: i64, cy: i64, cz: i64,
+    cx: i64,
+    cy: i64,
+    cz: i64,
 
     /* always must have length CHUNK_SIZE ^ 3
      *
@@ -26,9 +31,11 @@ pub struct Chunk {
 }
 
 pub struct World {
-    next_gen_x: i64,
-    next_gen_y: i64,
-    next_gen_z: i64,
+    input_tx: Sender<(i64, i64, i64, Option<Chunk>)>,
+    result_rx: Receiver<(i64, i64, i64, Option<Chunk>, VecMesh)>,
+    chunk_gen_thread: JoinHandle<()>,
+
+    chunks_in_progress: HashSet<(i64, i64, i64)>,
 
     pub chunks: HashMap<(i64, i64, i64), Chunk>,
     pub ticks: u64,
@@ -43,7 +50,12 @@ impl Chunk {
             voxels.push(BlockData::AIR);
         }
 
-        Self { cx, cy, cz, voxels: voxels.into_boxed_slice() }
+        Self {
+            cx,
+            cy,
+            cz,
+            voxels: voxels.into_boxed_slice(),
+        }
     }
 
     pub fn get_block_data(self: &Self, x: i64, y: i64, z: i64) -> BlockData {
@@ -53,12 +65,19 @@ impl Chunk {
     pub fn set_block_data(self: &mut Self, x: i64, y: i64, z: i64, value: BlockData) {
         self.voxels[self.get_block_idx(x, y, z)] = value;
     }
-    
+
+    pub fn is_within_bounds(&self, x: i64, y: i64, z: i64) -> bool {
+        (x >= self.cx * CHUNK_SIZE && y >= self.cy * CHUNK_SIZE && z >= self.cz * CHUNK_SIZE)
+            && (x < (self.cx + 1) * CHUNK_SIZE
+                && y < (self.cy + 1) * CHUNK_SIZE
+                && z < (self.cz + 1) * CHUNK_SIZE)
+    }
+
     fn get_block_idx(self: &Self, x: i64, y: i64, z: i64) -> usize {
         let (lx, ly, lz) = (
             x - self.cx * CHUNK_SIZE,
             y - self.cy * CHUNK_SIZE,
-            z - self.cz * CHUNK_SIZE
+            z - self.cz * CHUNK_SIZE,
         );
         let idx = ly * CHUNK_SIZE * CHUNK_SIZE + lz * CHUNK_SIZE + lx;
 
@@ -68,20 +87,39 @@ impl Chunk {
 
 impl World {
     pub fn new() -> Self {
+        let (input_tx, input_rx) = mpsc::channel::<(i64, i64, i64, Option<Chunk>)>();
+        let (result_tx, result_rx) = mpsc::channel::<(i64, i64, i64, Option<Chunk>, VecMesh)>();
+        let chunk_gen_thread = thread::spawn(|| {
+            World::remote_generate_terrain_chunk(input_rx, result_tx);
+        });
+
         Self {
             chunks: HashMap::new(),
-            next_gen_x: -WORLD_RADIUS,
-            next_gen_y: -WORLD_RADIUS,
-            next_gen_z: -WORLD_RADIUS,
+            input_tx,
+            result_rx,
+            chunk_gen_thread,
+            chunks_in_progress: HashSet::new(),
             ticks: 0,
         }
     }
 
     pub fn get_chunk_coords_of_block(x: i64, y: i64, z: i64) -> (i64, i64, i64) {
         (
-            if x >= 0 { x / CHUNK_SIZE } else { (x+1) / CHUNK_SIZE - 1 },
-            if y >= 0 { y / CHUNK_SIZE } else { (y+1) / CHUNK_SIZE - 1 },
-            if z >= 0 { z / CHUNK_SIZE } else { (z+1) / CHUNK_SIZE - 1 },
+            if x >= 0 {
+                x / CHUNK_SIZE
+            } else {
+                (x + 1) / CHUNK_SIZE - 1
+            },
+            if y >= 0 {
+                y / CHUNK_SIZE
+            } else {
+                (y + 1) / CHUNK_SIZE - 1
+            },
+            if z >= 0 {
+                z / CHUNK_SIZE
+            } else {
+                (z + 1) / CHUNK_SIZE - 1
+            },
         )
     }
 
@@ -98,9 +136,7 @@ impl World {
     }
 
     /* panics if used in a chunk that hasn't been generated yet */
-    pub fn set_block_data(
-        self: &mut Self, x: i64, y: i64, z: i64, value: BlockData
-    ) {
+    pub fn set_block_data(self: &mut Self, x: i64, y: i64, z: i64, value: BlockData) {
         let (cx, cy, cz) = World::get_chunk_coords_of_block(x, y, z);
 
         if let Some(chunk) = self.chunks.get_mut(&(cx, cy, cz)) {
@@ -110,85 +146,124 @@ impl World {
         }
     }
 
-    fn generate_terrain_column(self: &mut Self, x: i64, z: i64, cy: i64) {
+    // Multi-threaded chunk gen stuff
+    // Technically not even "multi"-threaded (?)
+    // So just threaded, I guess...
+    /// Dispatches a new chunk gen request
+    pub fn dispatch_chunk_gen(&mut self, cx: i64, cy: i64, cz: i64) {
+        if self.chunks_in_progress.contains(&(cx, cy, cz)) {
+            return;
+        }
+
+        self.input_tx.send((cx, cy, cz, None)).unwrap();
+        self.chunks_in_progress.insert((cx, cy, cz));
+    }
+
+    /// Dispatches request to only update mesh without generating chunk
+    pub fn dispatch_mesh_chunk(&mut self, cx: i64, cy: i64, cz: i64) {
+        if self.chunks_in_progress.contains(&(cx, cy, cz)) {
+            return;
+        }
+
+        let v = self
+            .chunks
+            .get(&(cx, cy, cz))
+            .expect("world did not contain requested chunk");
+
+        // FIXME: the clone here is almost certainly not the best idea, but it
+        // functions as a poor (rich?) man's mutex and also prevents us from
+        // having to contend with lifetimes
+        self.input_tx.send((cx, cy, cz, Some(v.clone()))).unwrap();
+        self.chunks_in_progress.insert((cx, cy, cz));
+    }
+
+    /// Polls the chunk gen thread for new blocks
+    pub fn poll_chunk_gen_thread(&mut self, world_renderer: &mut worldmesh::WorldRenderer) {
+        let result = self.result_rx.try_recv();
+        match result {
+            Ok(result) => {
+                if let Some(chunk) = result.3 {
+                    self.chunks.insert((result.0, result.1, result.2), chunk);
+                }
+
+                let mut mesh = result.4.to_mesh();
+                unsafe { mesh.upload(false) };
+                world_renderer.add_mesh(result.0, result.1, result.2, mesh);
+
+                self.chunks_in_progress.remove(&(result.0, result.1, result.2));
+            }
+            Err(_) => {
+                // we don't really care if it's disconnected or empty
+                // although it would probably be good to log it
+                // maybe in the future then
+            }
+        };
+    }
+
+    fn remote_generate_terrain_chunk(
+        input_rx: Receiver<(i64, i64, i64, Option<Chunk>)>,
+        result_tx: Sender<(i64, i64, i64, Option<Chunk>, VecMesh)>,
+    ) {
+        eprintln!("Terrain generation chunk started");
+        loop {
+            let (cx, cy, cz, existing_chunk) = input_rx.recv().unwrap();
+            
+            if let Some(chunk) = existing_chunk {
+                // Chunk was provided, only build the mesh
+                let vmesh = worldmesh::remote_build_geometry_chunk(&chunk, cx, cy, cz);
+                result_tx.send((cx, cy, cz, None, vmesh)).unwrap();
+            } else {
+                // If no chunk was provided, then we need to generate one
+                let mut chunk = Chunk::new(cx, cy, cz);
+
+                let r = 0..CHUNK_SIZE;
+
+                for z in r.clone() {
+                    for x in r.clone() {
+                        let (wx, wz) = (x + CHUNK_SIZE * cx, z + CHUNK_SIZE * cz);
+                        World::remote_generate_terrain_column(&mut chunk, wx, wz, cy);
+                    }
+                }
+                
+                let vmesh = worldmesh::remote_build_geometry_chunk(&chunk, cx, cy, cz);
+                result_tx.send((cx, cy, cz, Some(chunk), vmesh)).unwrap();
+            }
+
+            eprintln!("done with {cx}, {cy}, {cz}");
+        }
+    }
+
+    fn remote_generate_terrain_column(chunk: &mut Chunk, x: i64, z: i64, cy: i64) {
         // Generates one column within a chunk
         static SSN: std::sync::LazyLock<SuperSimplex> =
             std::sync::LazyLock::new(|| SuperSimplex::new(42));
-        
-        // How shallow slopes are. Don't set below 16 or it will error. 
+
+        // How shallow slopes are. Don't set below 16 or it will error.
         let noise_scale = 80.;
 
-        let sample_point = [
-            ((x as f64 / noise_scale)),
-            ((z as f64 / noise_scale))
-        ];
+        let sample_point = [(x as f64 / noise_scale), (z as f64 / noise_scale)];
 
         // arbitrary constants, give a height map between 4*12 and 6*12
-        let height = ((SSN.get(sample_point) + 5_f64) * 12_f64) as i64; 
+        let height = ((SSN.get(sample_point) + 5_f64) * 12_f64) as i64;
 
         for y in (CHUNK_SIZE * cy)..(CHUNK_SIZE * (cy + 1)) {
             let block_data = if y > height {
                 BlockData::AIR
             } else if y == height {
                 BlockData::GRASS
-            } else if y > height-3 {
+            } else if y > height - 3 {
                 BlockData::DIRT
             } else if y > 4 {
                 BlockData::STONE
             } else {
                 BlockData::BEDROCK
             };
-    
-            self.set_block_data(x, y, z, block_data);
+
+            chunk.set_block_data(x, y, z, block_data);
         }
     }
 
-    pub fn generate_terrain_chunk(self: &mut Self, cx: i64, cy: i64, cz: i64) {
-        let existing_chunk =
-            self.chunks.insert((cx, cy, cz), Chunk::new(cx, cy, cz));
-        assert!(existing_chunk.is_none());
-
-        let r = 0..CHUNK_SIZE;
-
-        for z in r.clone() { for x in r.clone() {
-            let (wx, wz) = (
-                x + CHUNK_SIZE * cx,
-                z + CHUNK_SIZE * cz
-            );
-            self.generate_terrain_column(wx, wz, cy);
-            }
-        };
-    }
-    
-    pub fn generate_next_chunk(self: &mut Self, world_renderer: &mut worldmesh::WorldRenderer) {
-        if self.next_gen_x > WORLD_RADIUS {
-            // No more chunks left to generate.
-            return;
-        }
-
-        self.generate_terrain_chunk(
-            self.next_gen_x, self.next_gen_y, self.next_gen_z
-        );
-
-        world_renderer.add_mesh(
-            self.next_gen_x, self.next_gen_y, self.next_gen_z,
-            worldmesh::build_geometry_chunk(
-                self, self.next_gen_x, self.next_gen_y, self.next_gen_z
-            )
-        );
-
-        self.next_gen_z += 1;
-        if self.next_gen_z > WORLD_RADIUS {
-            self.next_gen_y += 1;
-            if self.next_gen_y > WORLD_RADIUS {
-                self.next_gen_x += 1;
-                self.next_gen_y = -WORLD_RADIUS;
-            }
-            self.next_gen_z = -WORLD_RADIUS;
-        }
-    }
-
-    pub fn generate_surrounding_chunks(&mut self, world_renderer: &mut worldmesh::WorldRenderer, px: i64, py: i64, pz: i64, radius: i64) {
+    pub fn generate_surrounding_chunks(&mut self, px: i64, py: i64, pz: i64, radius: i64) {
         let (cx, cy, cz) = World::get_chunk_coords_of_block(px, py, pz);
 
         // Iterate from -radius to radius from lowest magnitude
@@ -202,16 +277,10 @@ impl World {
                     let (cx, cy, cz) = (cx + dx, cy + dy, cz + dz);
                     
                     if !self.chunks.contains_key(&(cx, cy, cz)) {
-                        self.generate_terrain_chunk(cx, cy, cz);
-
-                        world_renderer.add_mesh(cx, cy, cz, worldmesh::build_geometry_chunk(self, cx, cy, cz));
+                        self.dispatch_chunk_gen(cx, cy, cz);
                     }
                 }
             }
         }
     }
 }
-
-
-
-
