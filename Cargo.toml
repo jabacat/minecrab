@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 noise = "0.9"
-raylib = { package = "sola-raylib", version = "6.1", features = [ "wayland" ] }
+raylib = { package = "sola-raylib", version = "6.1", features = [ "wayland", "custom_frame_control" ] }
