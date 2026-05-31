@@ -13,7 +13,9 @@ use world::generation::World;
 use game::*;
 
 use render::{mesh_tools, skybox};
+use mesh_tools::{MaterialBuilder, draw_mesh2};
 use render::worldmesh::WorldRenderer;
+use MaterialMapIndex::*;
 
 use std::time::Instant;
 
@@ -23,13 +25,6 @@ const WINDOW_WIDTH: i32 = 1280;
 const WINDOW_HEIGHT: i32 = 720;
 const TICKRATE: u32 = 40;
 const TICK_LENGTH: f32 = 1./(TICKRATE as f32);
-
-//struct RenderData {
-//    pub skybox_mesh: Mesh,
-//    
-//    pub skybox_material: WeakMaterial,
-//    pub block_material: WeakMaterial
-//}
 
 fn main() {
     let (mut rl, thread) = raylib::init()
@@ -43,34 +38,18 @@ fn main() {
     rl.set_exit_key(None);
     rl.disable_cursor();
     
-    let texture: ffi::Texture = {
-        let mut t = rl
-            .load_texture(&thread, "assets/full-textures.png")
-            .expect("Should load 'assets/full-textures.png'.");
-
-        t.gen_texture_mipmaps();
-        unsafe { t.unwrap() }
-    };
-    
     let mut skybox_mesh: Mesh = skybox::create_skybox_mesh();
-    let mut skybox_material: WeakMaterial = rl.load_material_default(&thread);
-    let mut skybox_shader = rl.load_shader(
-        &thread,
-        Some("src/shader/skybox.vert"), 
-        Some("src/shader/skybox.frag"),
-    );
-    skybox_material.shader = *skybox_shader.as_ref();
 
-    let mut material = rl.load_material_default(&thread);
-    let mut block_shader = rl.load_shader(
-        &thread,
-        Some("src/shader/block.vert"),
-        Some("src/shader/block.frag"),
-    );
-    material.shader = *block_shader.as_ref();
+    let mut skybox_material = MaterialBuilder::init(&mut rl, &thread)
+        .vert("src/shader/skybox.vert")
+        .frag("src/shader/skybox.frag")
+        .build();
 
-    let maps = material.maps_mut();
-    maps[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].texture = texture;
+    let block_material = MaterialBuilder::init(&mut rl, &thread)
+        .vert("src/shader/block.vert")
+        .frag("src/shader/block.frag")
+        .map(MATERIAL_MAP_ALBEDO, "assets/full-textures.png")
+        .build();
 
     // create a static reference to audio_stream and sounds.
     // not sure if there's a better way to do this.
@@ -95,7 +74,7 @@ fn main() {
         sounds,
         player: Player::new(),
         world: World::new(),
-        world_renderer: WorldRenderer::new(material),
+        world_renderer: WorldRenderer::new(block_material),
         debug_text: String::new(),
         debug_info_shown: true,
         paused: false,
@@ -132,6 +111,7 @@ fn main() {
         // This makes it impossible to refactor parts of drawing (that need
         // access to gd) into their own functions. Not sure how to fix. -m
         let (rl, player) = (&mut gd.rl, &mut gd.player);
+        let world_renderer = &mut gd.world_renderer;
 
         rl.draw(&thread, |mut d| {
             d.clear_background(Color::LIGHTBLUE);
@@ -146,15 +126,16 @@ fn main() {
             skybox_cam.target -= player.camera.position;
 
             let day_amount: f32 = skybox::day_amount(gd.tick_counter);
-            let skybox_loc = skybox_shader.get_shader_location("dayAmount");
-            let block_loc = block_shader.get_shader_location("dayAmount");
-            skybox_shader.set_shader_value(skybox_loc, day_amount);
-            block_shader.set_shader_value(block_loc, day_amount);
+            let skybox_loc = skybox_material.shader().get_shader_location("dayAmount");
+            let block_loc = world_renderer.material.shader().get_shader_location("dayAmount");
+            skybox_material.shader_mut().set_shader_value(skybox_loc, day_amount);
+            world_renderer.material.shader_mut().set_shader_value(block_loc, day_amount);
 
-            d.draw_mode3D(skybox_cam, |mut d2, _camera| {
-                d2.draw_mesh(
+            d.draw_mode3D(skybox_cam, |d2, _camera| {
+                draw_mesh2(
+                    &d2,
                     &mut skybox_mesh,
-                    skybox_material.clone(),
+                    &skybox_material,
                     Matrix::identity(),
                 );
             });
@@ -162,7 +143,7 @@ fn main() {
             // World
             player.update_camera(interp);
 
-            gd.world_renderer.render(&mut d, player.camera);
+            world_renderer.render(&mut d, player.camera);
 
             // Temporary Pause Display
             

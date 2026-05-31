@@ -1,7 +1,7 @@
 use raylib::prelude::*;
 use std::collections::HashMap;
 
-use crate::mesh_tools::VecMesh;
+use crate::mesh_tools::{VecMesh, draw_mesh2};
 use crate::world::blocks::{BlockData, BlockTextureCoordinates};
 use crate::world::generation::{CHUNK_SIZE, World};
 
@@ -156,15 +156,15 @@ pub fn build_geometry_chunk(world: &mut World, cx: i64, cy: i64, cz: i64) -> Mes
 pub struct WorldRenderer {
     // Meshes are stored with a key of their chunk index
     chunk_meshes: HashMap<(i64, i64, i64), Mesh>,
-    material: WeakMaterial,
+    pub material: Material,
 }
 
 impl WorldRenderer {
 
-    pub fn new(material: WeakMaterial) -> WorldRenderer {
+    pub fn new(material: Material) -> WorldRenderer {
         WorldRenderer {
             chunk_meshes: HashMap::new(),
-            material: material,
+            material,
         }
     }
 
@@ -173,10 +173,10 @@ impl WorldRenderer {
         self.chunk_meshes.insert((cx, cy, cz), mesh);
     }
 
-    pub fn render(&mut self, d: &mut RaylibDrawHandle, camera: Camera3D) {
-        d.draw_mode3D(camera, |mut d2, _camera| {
+    pub fn render(&self, d: &mut RaylibDrawHandle, camera: Camera3D) {
+        d.draw_mode3D(camera, |d2, _camera| {
             for (_, mesh) in &self.chunk_meshes {
-                d2.draw_mesh(mesh, self.material.clone(), Matrix::identity());
+                draw_mesh2(&d2, mesh, &self.material, Matrix::identity());
             }
         });
     }
