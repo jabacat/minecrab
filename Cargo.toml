@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 noise = "0.9"
-raylib = { package = "sola-raylib", version = "6.1", features = [ "sdl", "custom_frame_control" ] }
+raylib = { package = "sola-raylib", version = "= 6.2", features = [ "sdl", "custom_frame_control" ] }

@@ -37,7 +37,7 @@ impl<'a> MaterialBuilder<'a> {
     pub fn build(self) -> Material {
         let shader = self.rl.load_shader(
                 self.thread, self.vert.as_deref(), self.frag.as_deref()
-            );
+            ).expect("load shader");
 
         let maps = Box::leak(self.maps);
         
