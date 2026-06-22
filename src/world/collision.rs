@@ -1,3 +1,5 @@
+use raylib::math::Vector3;
+
 use super::generation::World;
 use super::blocks::BlockData;
 
@@ -11,7 +13,10 @@ pub struct VoxelRaycastHit {
     pub normal_x: f32, pub normal_y: f32, pub normal_z: f32,
     
     //where the hit was on the face.
-    pub u: f32, pub v: f32
+    pub u: f32, pub v: f32,
+
+    // The raw world coordinates of the hit, as a 3-tuple in space.
+    pub raw_coords: Vector3
 }
 
 pub fn voxel_raycast(
@@ -82,7 +87,8 @@ pub fn voxel_raycast(
             let mut hit = VoxelRaycastHit {
                 x: vx, y: vy, z: vz,
                 normal_x: 0., normal_y: 0., normal_z: 0.,
-                u: 0., v: 0.
+                u: 0., v: 0.,
+                raw_coords: Vector3{x: pos[0], y: pos[1], z: pos[2]}
             };
 
             match (closest_axis, step_direction) {

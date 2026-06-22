@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 use std::fs;
 use std::time::Instant;
 
-use crate::player::{Player, PlayerData};
+use crate::player::{Player, PlayerData, camera_pos_from_player_pos};
 use crate::render::mesh_tools::{MaterialBuilder, draw_mesh2};
 use crate::render::skybox;
 use crate::render::pause_menu::{PauseMenu, PauseMenuState};
@@ -211,7 +211,7 @@ impl GameController {
             self.game_data.tick_counter += 1;
 
             self.player
-                .process_tick(&mut self.game_data.player_data, rl);
+                .process_tick(&mut self.game_data.player_data, rl, &self.game_data.world);
 
             if rl.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) {
                 let hit = self.hit_voxel_from_player();
@@ -319,7 +319,7 @@ impl GameController {
         let interp = 1. - (self.next_tick_in / TICK_LENGTH).clamp(0., 1.);
         if !self.paused {
             self.player
-                .update_camera(&mut self.game_data.player_data, interp);
+                .update_camera(&mut self.game_data.player_data, interp, &self.game_data.world);
         }
     }
 
@@ -470,9 +470,9 @@ impl GameController {
 
     fn hit_voxel_from_player(&self) -> Option<VoxelRaycastHit> {
         // Return a hit from where the player is looking
-        let p = self.game_data.player_data.pos;
+        let p = camera_pos_from_player_pos(self.game_data.player_data.pos);
 
-        let mut dir = self.game_data.player_data.fwd - p;
+        let mut dir = self.game_data.player_data.fwd - self.game_data.player_data.pos;
         dir.normalize();
 
         voxel_raycast(
