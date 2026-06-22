@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 
 // XXX: Consider importing *?
+use crate::render::gui::Text;
 use crate::render::gui::Button;
 use crate::render::gui::ColLayout;
 use crate::render::gui::GuiElement;
@@ -66,7 +67,7 @@ impl PauseButtonType {
 // Macro from creating a button in the pause menu using PauseButtonType
 macro_rules! pb {
     ( $e:expr ) => {
-        button!($e.get_text(), $e.get_act())
+        button!(text!($e.get_text()), $e.get_act())
     };
 }
 
@@ -141,10 +142,10 @@ impl PauseMenu {
             }
             // FIXME: extend GUI to have text (among other components)
             PauseMenuState::ShouldLoad => {
-                self.root_element = Some(button!("Loading save...", Box::new(|_| None)))
+                self.root_element = Some(text!("Loading save..."))
             }
             PauseMenuState::ShouldSave => {
-                self.root_element = Some(button!("Saving...", Box::new(|_| None)))
+                self.root_element = Some(text!("Saving..."))
             }
             PauseMenuState::Video => {
                 self.root_element = Some(col!([

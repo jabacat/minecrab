@@ -296,13 +296,13 @@ impl GameController {
 
         // World
         self.world_renderer.render(&mut d, self.player.camera);
-
-        // Crosshair
-        GameController::draw_crosshair(&mut d);
         
         // Pause menu
         if self.paused {
             self.pause_menu.render(&mut d);
+        } else {
+            // Crosshair
+            GameController::draw_crosshair(&mut d);
         }
 
         // Debug Info

@@ -26,9 +26,15 @@ macro_rules! row {
     };
 }
 
+macro_rules! text {
+    ( $t:expr ) => {
+        Box::new(Text::new($t))
+    };
+}
+
 macro_rules! button {
-    ( $t:expr, $a:expr ) => {
-        Box::new(Button::new($t, $a))
+    ( $e:expr, $a:expr ) => {
+        Box::new(Button::new($e, $a))
     };
 }
 
@@ -46,25 +52,66 @@ pub trait GuiElement<T> {
     ) -> Option<T>;
 }
 
+pub struct Text {
+    text: &'static str,
+}
+
+impl Text {
+    pub fn new(text: &'static str) -> Self {
+        Text { text }
+    }
+}
+
+impl<T> GuiElement<T> for Text {
+    fn get_total_width(&self) -> i32 {
+        todo!()
+    }
+
+    fn get_total_height(&self) -> i32 {
+        FONT_SIZE
+    }
+
+    fn render(&mut self, d: &mut RaylibDrawHandle, x: i32, y: i32, width: i32) {
+        let text_width = d.measure_text(self.text, FONT_SIZE);
+        let text_x = (width - text_width) / 2 + x;
+        let text_y = (BUTTON_HEIGHT - FONT_SIZE) / 2 + y;
+        d.draw_text(self.text, text_x, text_y, FONT_SIZE, BUTTON_FG);
+    }
+
+    fn check_mouse(
+        &mut self,
+        _rl: &mut RaylibHandle,
+        _mx: i32,
+        _my: i32,
+        _lmb_pressed: bool,
+    ) -> Option<T> {
+        None
+    }
+}
+
 pub struct Button<T> {
     x: i32,
     y: i32,
     width: i32,
     height: i32,
-    text: &'static str,
     act: Box<dyn Fn(&mut RaylibHandle) -> Option<T>>,
+
+    element: Box<dyn GuiElement<T>>,
 
     hover: bool,
 }
 
 impl<T> Button<T> {
-    pub fn new(text: &'static str, act: Box<dyn Fn(&mut RaylibHandle) -> Option<T>>) -> Self {
+    pub fn new(
+        element: Box<dyn GuiElement<T>>,
+        act: Box<dyn Fn(&mut RaylibHandle) -> Option<T>>,
+    ) -> Self {
         Button {
             x: -1,
             y: -1,
             width: -1,
             height: BUTTON_HEIGHT,
-            text,
+            element,
             act,
             hover: false,
         }
@@ -103,10 +150,7 @@ impl<T> GuiElement<T> for Button<T> {
         );
         d.draw_rectangle_lines(x, y, width, BUTTON_HEIGHT, BUTTON_BORDER_COLOR);
 
-        let text_width = d.measure_text(self.text, FONT_SIZE);
-        let text_x = (width - text_width) / 2 + x;
-        let text_y = (BUTTON_HEIGHT - FONT_SIZE) / 2 + y;
-        d.draw_text(self.text, text_x, text_y, FONT_SIZE, BUTTON_FG);
+        self.element.render(d, x, y, width);
     }
 
     fn check_mouse(
@@ -119,7 +163,9 @@ impl<T> GuiElement<T> for Button<T> {
         self.hover = (self.x..(self.x + self.width)).contains(&(mx as i32))
             && (self.y..(self.y + self.height)).contains(&(my as i32));
         if self.hover && lmb_pressed {
-            (self.act)(rl)
+            self.element
+                .check_mouse(rl, mx, my, lmb_pressed)
+                .or((self.act)(rl))
         } else {
             None
         }
